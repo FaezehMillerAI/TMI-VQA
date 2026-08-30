@@ -50,8 +50,15 @@ def setup_symlink(dataset_name, search_filename, target_link, hf_repo_id=None, p
     if hf_repo_id:
         print(f"-> {dataset_name} not found in /kaggle/input. Auto-downloading from Hugging Face ({hf_repo_id})...")
         os.makedirs(target_link, exist_ok=True)
-        cmd = f"huggingface-cli download {hf_repo_id} --repo-type dataset --local-dir {target_link}"
-        success = run_command(cmd)
+        try:
+            from huggingface_hub import snapshot_download
+            snapshot_download(repo_id=hf_repo_id, repo_type="dataset", local_dir=target_link)
+            success = True
+        except Exception as err:
+            print(f"snapshot_download fallback ({err}), trying CLI...")
+            cmd = f"huggingface-cli download {hf_repo_id} --repo-type dataset --local-dir {target_link}"
+            success = run_command(cmd)
+
         if success and post_download_cmd:
             run_command(post_download_cmd)
         return success
@@ -71,7 +78,7 @@ def main():
 
     # 1. Install requirements if not fully installed
     print("\nInstalling requirements...")
-    run_command("pip install -q -r requirements.txt huggingface_hub[cli]")
+    run_command("pip install -q -r requirements.txt huggingface_hub")
 
     # 2. Setup or Auto-Download all 5 datasets
     print("\nPreparing Datasets...")
