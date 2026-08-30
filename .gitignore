@@ -1,20 +1,26 @@
 # Ignore massive datasets and zips
 data/
+PathVQA/
+Kvasir/
+VQA-RAD/
+ms-cxr-making-the-most-of-text-semantics-to-improve-biomedical-vision-language-processing-1.1.0/
 *.zip
-Slake.zip
+*.parquet
 
 # Ignore large PDFs and CSV data
 *.pdf
 *.csv
 
-# Ignore local trained model weights and evaluation outputs
-models/slake_vqa_model.pth
-models/inpainter.pth
+# Ignore local virtual environment and checkpoints
+.venv/
+models/*.pth
+models/*.pt
 outputs/
 
 # Ignore Python caches
 __pycache__/
 *.pyc
 
-# Ignore OS junk
+# Ignore duplicate images and OS junk
 .DS_Store
+* (*).png

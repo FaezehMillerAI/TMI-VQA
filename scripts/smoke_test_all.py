@@ -10,6 +10,8 @@ from utils.slake_loader import SlakeCausalDataset
 from utils.vqa_rad_loader import VQARadCausalDataset
 from utils.ms_cxr_loader import MSCXRCausalDataset
 from utils.heal_loader import HealMedVQADataset
+from utils.pathvqa_loader import PathVQACausalDataset
+from utils.kvasir_loader import KvasirCausalDataset
 from models.cqc_net import CQCNet
 from models.inpainter import CounterfactualInpainter
 from models.causal_decoder import CausalContrastiveDecoder
@@ -117,7 +119,23 @@ def main():
     except Exception as e:
         print(f"Failed to initialize HEAL-MedVQA: {str(e)}")
         results["heal"] = False
-        
+
+    # 5. PathVQA
+    try:
+        pathvqa_dataset = PathVQACausalDataset(data_dir=os.path.join(data_dir, "pathvqa"), split="test")
+        results["pathvqa"] = smoke_test_dataset("pathvqa", pathvqa_dataset, vqa_model, inpainter, causal_decoder, device)
+    except Exception as e:
+        print(f"Failed to initialize PathVQA: {str(e)}")
+        results["pathvqa"] = False
+
+    # 6. Kvasir-VQA
+    try:
+        kvasir_dataset = KvasirCausalDataset(data_dir=os.path.join(data_dir, "kvasir"), split="test")
+        results["kvasir"] = smoke_test_dataset("kvasir", kvasir_dataset, vqa_model, inpainter, causal_decoder, device)
+    except Exception as e:
+        print(f"Failed to initialize Kvasir-VQA: {str(e)}")
+        results["kvasir"] = False
+
     print("\n==================================================")
     print("               SMOKE TEST SUMMARY                 ")
     print("==================================================")

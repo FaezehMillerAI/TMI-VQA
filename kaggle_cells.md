@@ -63,13 +63,19 @@ setup_symlink("VQA-RAD", "VQA_RAD Dataset Public.json", "data/VQA-RAD")
 # 3. Link MS-CXR (if uploaded)
 setup_symlink("MS-CXR", "MS_CXR_Local_Alignment_v1.1.0.json", "data/ms-cxr")
 
+# 4. Link PathVQA
+setup_symlink("PathVQA", "train-00000-of-00007-f2d0e9ef9f022d38.parquet", "data/pathvqa", path_filter="pathvqa")
+
+# 5. Link Kvasir-VQA
+setup_symlink("Kvasir-VQA", "train-00000-of-00001.parquet", "data/kvasir", path_filter="kvasir")
+
 print("\nDataset configuration setup complete!")
 ```
 
 ---
 
 ### **Cell 3: Run Multi-Dataset Smoke Test**
-Run this cell to immediately verify that VQA-RAD, MS-CXR, HEAL-MedVQA, and SLAKE loaders and forward passes are working correctly.
+Run this cell to immediately verify that VQA-RAD, MS-CXR, PathVQA, Kvasir-VQA, and SLAKE loaders and forward passes are working correctly.
 
 ```python
 # Run the end-to-end smoke test on all datasets
@@ -95,8 +101,14 @@ Select which dataset you wish to train on by setting the `--dataset` argument:
 # Option A: Fine-tune on SLAKE
 !PYTHONPATH=. python3 training/train_slake_vqa.py --dataset slake --epochs 3 --batch_size 16 --device cuda
 
-# Option B: Fine-tune on VQA-RAD (Uncomment if training VQA-RAD)
+# Option B: Fine-tune on VQA-RAD
 # !PYTHONPATH=. python3 training/train_slake_vqa.py --dataset vqa_rad --epochs 3 --batch_size 16 --device cuda
+
+# Option C: Fine-tune on PathVQA
+# !PYTHONPATH=. python3 training/train_slake_vqa.py --dataset pathvqa --epochs 3 --batch_size 16 --device cuda
+
+# Option D: Fine-tune on Kvasir-VQA
+# !PYTHONPATH=. python3 training/train_slake_vqa.py --dataset kvasir --epochs 3 --batch_size 16 --device cuda
 ```
 
 ---
@@ -111,11 +123,14 @@ print("--- BENCHMARK RESULTS: SLAKE ---")
 print("\n--- BENCHMARK RESULTS: VQA-RAD ---")
 !PYTHONPATH=. python3 scripts/benchmark_comparison.py --dataset vqa_rad --device cuda
 
+print("\n--- BENCHMARK RESULTS: PATHVQA ---")
+!PYTHONPATH=. python3 scripts/benchmark_comparison.py --dataset pathvqa --device cuda
+
+print("\n--- BENCHMARK RESULTS: KVASIR-VQA ---")
+!PYTHONPATH=. python3 scripts/benchmark_comparison.py --dataset kvasir --device cuda
+
 print("\n--- BENCHMARK RESULTS: MS-CXR ---")
 !PYTHONPATH=. python3 scripts/benchmark_comparison.py --dataset ms_cxr --device cuda
-
-print("\n--- BENCHMARK RESULTS: HEAL-MedVQA ---")
-!PYTHONPATH=. python3 scripts/benchmark_comparison.py --dataset heal --device cuda
 ```
 
 ---

@@ -96,7 +96,29 @@ def train_vqa(dataset_name="slake", data_dir="data/", config_path="configs/basel
         val_dataset = torch.utils.data.Subset(full_dataset, indices[split_idx:])
         collate = causal_collate_fn
         raw_train_items = [full_dataset.data[i] for i in indices[:split_idx]]
-        
+
+    elif dataset_name == "pathvqa":
+        pathvqa_dir = os.path.join(data_dir, "pathvqa")
+        from utils.pathvqa_loader import PathVQACausalDataset
+        train_dataset = PathVQACausalDataset(data_dir=pathvqa_dir, split="train")
+        train_dataset.data = [item for item in train_dataset.data if item.get("answer_type") == "CLOSED"]
+
+        val_dataset = PathVQACausalDataset(data_dir=pathvqa_dir, split="val")
+        val_dataset.data = [item for item in val_dataset.data if item.get("answer_type") == "CLOSED"]
+        collate = causal_collate_fn
+        raw_train_items = train_dataset.data
+
+    elif dataset_name == "kvasir":
+        kvasir_dir = os.path.join(data_dir, "kvasir")
+        from utils.kvasir_loader import KvasirCausalDataset
+        train_dataset = KvasirCausalDataset(data_dir=kvasir_dir, split="train")
+        train_dataset.data = [item for item in train_dataset.data if item.get("answer_type") == "CLOSED"]
+
+        val_dataset = KvasirCausalDataset(data_dir=kvasir_dir, split="test")
+        val_dataset.data = [item for item in val_dataset.data if item.get("answer_type") == "CLOSED"]
+        collate = causal_collate_fn
+        raw_train_items = train_dataset.data
+
     # Build vocabulary for exact candidate classification
     ans2idx, idx2ans = build_answer_vocab(raw_train_items)
     save_vocab(ans2idx, idx2ans, f"models/{dataset_name}_vocab.json")
@@ -210,7 +232,7 @@ def train_vqa(dataset_name="slake", data_dir="data/", config_path="configs/basel
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=str, default="slake", choices=["slake", "vqa_rad"])
+    parser.add_argument("--dataset", type=str, default="slake", choices=["slake", "vqa_rad", "pathvqa", "kvasir"])
     parser.add_argument("--data_dir", type=str, default="data/")
     parser.add_argument("--config_path", type=str, default="configs/baseline_vqa.yaml")
     parser.add_argument("--epochs", type=str, default="3")

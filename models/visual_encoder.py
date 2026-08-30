@@ -29,7 +29,10 @@ class DualScaleVisualEncoder(nn.Module):
                 from transformers import ViTModel
                 model_name = "google/vit-base-patch16-224-in21k"
                 print(f"Loading real ViT Vision Encoder: {model_name}...")
-                self.backbone = ViTModel.from_pretrained(model_name)
+                try:
+                    self.backbone = ViTModel.from_pretrained(model_name, local_files_only=True)
+                except Exception:
+                    self.backbone = ViTModel.from_pretrained(model_name)
                 self.use_real = True
                 print("Successfully loaded pre-trained ViT Vision Encoder!")
             except Exception as e:

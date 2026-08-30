@@ -53,30 +53,38 @@ def main():
     setup_symlink("SLAKE", "test.json", "data/slake", path_filter="slake")
     setup_symlink("VQA-RAD", "VQA_RAD Dataset Public.json", "data/VQA-RAD")
     setup_symlink("MS-CXR", "MS_CXR_Local_Alignment_v1.1.0.json", "data/ms-cxr")
-    
+    setup_symlink("PathVQA", "train-00000-of-00007-f2d0e9ef9f022d38.parquet", "data/pathvqa", path_filter="pathvqa")
+    setup_symlink("Kvasir-VQA", "train-00000-of-00001.parquet", "data/kvasir", path_filter="kvasir")
+
     # Check GPU availability
     import torch
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"\nTarget execution device: {device.upper()}")
-    
+
     # 2. Install requirements if not fully installed
     print("\nInstalling requirements...")
     run_command("pip install -q -r requirements.txt")
-    
+
     # 3. Train Inpainter
-    print("\nStep 1/5: Training Counterfactual Inpainter (CFI)...")
+    print("\nStep 1/6: Training Counterfactual Inpainter (CFI)...")
     run_command(f"PYTHONPATH=. python3 training/train_inpainter.py --epochs 5 --batch_size 16 --device {device}")
-    
-    # 4. Fine-tune VQA Model
-    print("\nStep 2/5: Fine-tuning VQA model on SLAKE...")
+
+    # 4. Fine-tune VQA Model across datasets
+    print("\nStep 2/6: Fine-tuning VQA model on SLAKE...")
     run_command(f"PYTHONPATH=. python3 training/train_slake_vqa.py --dataset slake --epochs 3 --batch_size 16 --device {device}")
-    
-    print("\nStep 3/5: Fine-tuning VQA model on VQA-RAD...")
+
+    print("\nStep 3/6: Fine-tuning VQA model on VQA-RAD...")
     run_command(f"PYTHONPATH=. python3 training/train_slake_vqa.py --dataset vqa_rad --epochs 3 --batch_size 16 --device {device}")
-    
+
+    print("\nStep 4/6: Fine-tuning VQA model on PathVQA...")
+    run_command(f"PYTHONPATH=. python3 training/train_slake_vqa.py --dataset pathvqa --epochs 3 --batch_size 16 --device {device}")
+
+    print("\nStep 5/6: Fine-tuning VQA model on Kvasir-VQA...")
+    run_command(f"PYTHONPATH=. python3 training/train_slake_vqa.py --dataset kvasir --epochs 3 --batch_size 16 --device {device}")
+
     # 5. Run Comparative Benchmarking
-    print("\nStep 4/5: Running comparative benchmarks...")
-    for ds in ["slake", "vqa_rad", "ms_cxr", "heal"]:
+    print("\nStep 6/6: Running comparative benchmarks across all datasets...")
+    for ds in ["slake", "vqa_rad", "pathvqa", "kvasir", "ms_cxr"]:
         run_command(f"PYTHONPATH=. python3 scripts/benchmark_comparison.py --dataset {ds} --device {device}")
         
     # 6. Generate reliability diagrams and proof sheets

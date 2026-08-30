@@ -14,6 +14,8 @@ from utils.slake_loader import SlakeCausalDataset, causal_collate_fn
 from utils.vqa_rad_loader import VQARadCausalDataset
 from utils.ms_cxr_loader import MSCXRCausalDataset
 from utils.heal_loader import HealMedVQADataset
+from utils.pathvqa_loader import PathVQACausalDataset
+from utils.kvasir_loader import KvasirCausalDataset
 from models.cqc_net import CQCNet
 from models.inpainter import CounterfactualInpainter
 from models.causal_decoder import CausalContrastiveDecoder
@@ -24,7 +26,7 @@ from utils.vocab import load_vocab, build_answer_vocab, normalize_answer
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=str, default="slake", choices=["slake", "vqa_rad", "ms_cxr", "heal"])
+    parser.add_argument("--dataset", type=str, default="slake", choices=["slake", "vqa_rad", "ms_cxr", "heal", "pathvqa", "kvasir"])
     parser.add_argument("--data_dir", type=str, default="data/")
     parser.add_argument("--device", type=str, default="mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu"))
     args = parser.parse_args()
@@ -93,6 +95,16 @@ def main():
         collate = causal_collate_fn
     elif args.dataset == "heal":
         dataset = HealMedVQADataset(split="test")
+        collate = causal_collate_fn
+    elif args.dataset == "pathvqa":
+        pathvqa_dir = os.path.join(args.data_dir, "pathvqa")
+        dataset = PathVQACausalDataset(data_dir=pathvqa_dir, split="test")
+        dataset.data = [item for item in dataset.data if item.get("answer_type") == "CLOSED"]
+        collate = causal_collate_fn
+    elif args.dataset == "kvasir":
+        kvasir_dir = os.path.join(args.data_dir, "kvasir")
+        dataset = KvasirCausalDataset(data_dir=kvasir_dir, split="test")
+        dataset.data = [item for item in dataset.data if item.get("answer_type") == "CLOSED"]
         collate = causal_collate_fn
         
     print(f"Loaded {len(dataset)} evaluation samples.")

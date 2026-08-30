@@ -31,8 +31,12 @@ class ModularTextEncoder(nn.Module):
                 from transformers import AutoTokenizer, AutoModel
                 model_name = "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext"
                 print(f"Loading real PubMedBERT Text Encoder: {model_name}...")
-                self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-                self.hf_model = AutoModel.from_pretrained(model_name)
+                try:
+                    self.tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=True)
+                    self.hf_model = AutoModel.from_pretrained(model_name, local_files_only=True)
+                except Exception:
+                    self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+                    self.hf_model = AutoModel.from_pretrained(model_name)
                 self.use_hf = True
                 print("Successfully loaded pre-trained PubMedBERT Text Encoder!")
             except Exception as e:
