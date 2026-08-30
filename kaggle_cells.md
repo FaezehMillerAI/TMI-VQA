@@ -18,58 +18,66 @@ Run this block to clone the codebase and install requirements.
 
 ---
 
-### **Cell 2: Dataset Configuration & Symbolic Linking**
-This cell automatically scans `/kaggle/input/` recursively to find where **SLAKE** and **VQA-RAD** are mounted, creating symbolic links to `data/slake` and `data/VQA-RAD` dynamically (this solves Errno 2 path mismatch issues instantly):
+### **Cell 2: Automatic Dataset Setup & Downloader**
+This cell automatically checks `/kaggle/input/` for attached datasets, and if they are not attached, **auto-downloads them directly from Hugging Face** into `data/`:
 
 ```python
-import os
+import os, shutil
 
-# Create data directories
 os.makedirs("data", exist_ok=True)
 
-def setup_symlink(dataset_name, search_filename, target_link, path_filter=None):
-    if os.path.exists(target_link):
-        if os.path.islink(target_link):
-            os.unlink(target_link)
-        else:
-            import shutil
-            shutil.rmtree(target_link)
-            
+# Install huggingface-cli
+!pip install -q huggingface_hub[cli]
+
+def setup_symlink(dataset_name, search_filename, target_link, hf_repo_id=None, post_download_cmd=None, path_filter=None):
+    if os.path.exists(target_link) and len(os.listdir(target_link)) > 0:
+        print(f"-> {dataset_name} is already prepared at: {target_link}")
+        return True
+
     found_dir = None
-    print(f"Scanning /kaggle/input for {dataset_name} ({search_filename})...")
-    for root, dirs, files in os.walk("/kaggle/input"):
-        if path_filter and path_filter not in root.lower():
-            continue
-        for file in files:
-            if file == search_filename:
+    if os.path.exists("/kaggle/input"):
+        for root, dirs, files in os.walk("/kaggle/input"):
+            if path_filter and path_filter not in root.lower(): continue
+            if search_filename in files:
                 found_dir = root
                 break
-        if found_dir:
-            break
-            
+                
     if found_dir:
-        print(f"-> Found {dataset_name} at: {found_dir}")
+        print(f"-> Found {dataset_name} in /kaggle/input at: {found_dir}")
+        if os.path.exists(target_link):
+            if os.path.islink(target_link): os.unlink(target_link)
+            else: shutil.rmtree(target_link)
         os.symlink(found_dir, target_link)
         print(f"-> Successfully linked to {target_link}")
-    else:
-        print(f"-> Warning: Could not find {dataset_name} dataset in /kaggle/input.")
+        return True
 
-# 1. Link SLAKE
-setup_symlink("SLAKE", "test.json", "data/slake", path_filter="slake")
+    if hf_repo_id:
+        print(f"-> Auto-downloading {dataset_name} from Hugging Face ({hf_repo_id})...")
+        os.makedirs(target_link, exist_ok=True)
+        !huggingface-cli download {hf_repo_id} --repo-type dataset --local-dir {target_link}
+        if post_download_cmd:
+            get_ipython().system(post_download_cmd)
+        return True
 
-# 2. Link VQA-RAD
-setup_symlink("VQA-RAD", "VQA_RAD Dataset Public.json", "data/VQA-RAD")
+    print(f"-> Warning: Could not prepare {dataset_name} dataset.")
+    return False
 
-# 3. Link MS-CXR (if uploaded)
+# 1. Setup SLAKE
+setup_symlink("SLAKE", "test.json", "data/slake", hf_repo_id="BoKelvin/SLAKE", post_download_cmd="if [ -f data/slake/imgs.zip ]; then unzip -q -o data/slake/imgs.zip -d data/slake/; fi", path_filter="slake")
+
+# 2. Setup VQA-RAD
+setup_symlink("VQA-RAD", "VQA_RAD Dataset Public.json", "data/VQA-RAD", hf_repo_id="flaviagiammarino/vqa-rad")
+
+# 3. Setup PathVQA
+setup_symlink("PathVQA", "train-00000-of-00007-f2d0e9ef9f022d38.parquet", "data/pathvqa", hf_repo_id="flaviagiammarino/path-vqa", path_filter="pathvqa")
+
+# 4. Setup Kvasir-VQA
+setup_symlink("Kvasir-VQA", "train-00000-of-00001.parquet", "data/kvasir", hf_repo_id="SimulaMet/Kvasir-VQA-x1", path_filter="kvasir")
+
+# 5. Setup MS-CXR
 setup_symlink("MS-CXR", "MS_CXR_Local_Alignment_v1.1.0.json", "data/ms-cxr")
 
-# 4. Link PathVQA
-setup_symlink("PathVQA", "train-00000-of-00007-f2d0e9ef9f022d38.parquet", "data/pathvqa", path_filter="pathvqa")
-
-# 5. Link Kvasir-VQA
-setup_symlink("Kvasir-VQA", "train-00000-of-00001.parquet", "data/kvasir", path_filter="kvasir")
-
-print("\nDataset configuration setup complete!")
+print("\nAll datasets are configured and ready!")
 ```
 
 ---
