@@ -3,7 +3,7 @@
 **Authors**: Faezeh Miller, et al.  
 **Target Journal**: *IEEE Transactions on Medical Imaging (IEEE TMI)*  
 **Submission Category**: Original Regular Paper (SIER Compliant)  
-**Code & Reproducibility Repository**: [https://github.com/FaezehMillerAI/CI-GCI.git](https://github.com/FaezehMillerAI/CI-GCI.git)  
+**Code & Reproducibility Repository**: [https://github.com/FaezehMillerAI/TMI-VQA.git](https://github.com/FaezehMillerAI/TMI-VQA.git)  
 
 ---
 

@@ -9,8 +9,8 @@ Run this block to clone the codebase and install requirements.
 
 ```python
 # 1. Clone the repository
-!git clone https://github.com/FaezehMillerAI/CI-GCI.git
-%cd CI-GCI
+!git clone https://github.com/FaezehMillerAI/TMI-VQA.git
+%cd TMI-VQA
 
 # 2. Install requirements
 !pip install -r requirements.txt
