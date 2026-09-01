@@ -66,15 +66,24 @@ def setup_symlink(dataset_name, search_filename, target_link, hf_repo_id=None, p
     print(f"-> Warning: Could not find {dataset_name} dataset.")
     return False
 
+import argparse
+
 def main():
+    parser = argparse.ArgumentParser(description="CI-GCI Automated Experiment Pipeline")
+    parser.add_argument("--epochs", type=int, default=15, help="Number of fine-tuning epochs per dataset")
+    parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
+    parser.add_argument("--device", type=str, default=None, help="Target device (cuda, mps, cpu)")
+    args = parser.parse_args()
+
     print("==================================================")
     print("      CI-GCI AUTOMATED EXPERIMENT PIPELINE        ")
     print("==================================================")
     
     # Check GPU availability
     import torch
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = args.device or ("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
     print(f"\nTarget execution device: {device.upper()}")
+    print(f"Fine-tuning epochs per dataset: {args.epochs}")
 
     # 1. Install requirements if not fully installed
     print("\nInstalling requirements...")
@@ -118,20 +127,20 @@ def main():
 
     # 3. Train Inpainter
     print("\nStep 1/6: Training Counterfactual Inpainter (CFI)...")
-    run_command(f"PYTHONPATH=. python3 training/train_inpainter.py --epochs 5 --batch_size 16 --device {device}")
+    run_command(f"PYTHONPATH=. python3 training/train_inpainter.py --epochs 5 --batch_size {args.batch_size} --device {device}")
 
     # 4. Fine-tune VQA Model across datasets
-    print("\nStep 2/6: Fine-tuning VQA model on SLAKE...")
-    run_command(f"PYTHONPATH=. python3 training/train_slake_vqa.py --dataset slake --epochs 3 --batch_size 16 --device {device}")
+    print(f"\nStep 2/6: Fine-tuning VQA model on SLAKE ({args.epochs} epochs)...")
+    run_command(f"PYTHONPATH=. python3 training/train_slake_vqa.py --dataset slake --epochs {args.epochs} --batch_size {args.batch_size} --device {device}")
 
-    print("\nStep 3/6: Fine-tuning VQA model on VQA-RAD...")
-    run_command(f"PYTHONPATH=. python3 training/train_slake_vqa.py --dataset vqa_rad --epochs 3 --batch_size 16 --device {device}")
+    print(f"\nStep 3/6: Fine-tuning VQA model on VQA-RAD ({args.epochs} epochs)...")
+    run_command(f"PYTHONPATH=. python3 training/train_slake_vqa.py --dataset vqa_rad --epochs {args.epochs} --batch_size {args.batch_size} --device {device}")
 
-    print("\nStep 4/6: Fine-tuning VQA model on PathVQA...")
-    run_command(f"PYTHONPATH=. python3 training/train_slake_vqa.py --dataset pathvqa --epochs 3 --batch_size 16 --device {device}")
+    print(f"\nStep 4/6: Fine-tuning VQA model on PathVQA ({args.epochs} epochs)...")
+    run_command(f"PYTHONPATH=. python3 training/train_slake_vqa.py --dataset pathvqa --epochs {args.epochs} --batch_size {args.batch_size} --device {device}")
 
-    print("\nStep 5/6: Fine-tuning VQA model on Kvasir-VQA...")
-    run_command(f"PYTHONPATH=. python3 training/train_slake_vqa.py --dataset kvasir --epochs 3 --batch_size 16 --device {device}")
+    print(f"\nStep 5/6: Fine-tuning VQA model on Kvasir-VQA ({args.epochs} epochs)...")
+    run_command(f"PYTHONPATH=. python3 training/train_slake_vqa.py --dataset kvasir --epochs {args.epochs} --batch_size {args.batch_size} --device {device}")
 
     # 5. Run Comparative Benchmarking
     print("\nStep 6/6: Running comparative benchmarks across all datasets...")
@@ -139,7 +148,7 @@ def main():
         run_command(f"PYTHONPATH=. python3 scripts/benchmark_comparison.py --dataset {ds} --device {device}")
         
     # 6. Generate reliability diagrams and proof sheets
-    print("\nStep 5/5: Generating plots and reliability diagrams...")
+    print("\nGenerating plots and reliability diagrams...")
     run_command(f"PYTHONPATH=. python3 scripts/generate_plots_and_proofs.py --dataset slake --device {device}")
     run_command(f"PYTHONPATH=. python3 scripts/generate_plots_and_proofs.py --dataset vqa_rad --device {device}")
     
