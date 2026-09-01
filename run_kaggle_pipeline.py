@@ -46,17 +46,22 @@ def setup_symlink(dataset_name, search_filename, target_link, hf_repo_id=None, p
         print(f"-> Successfully linked to {target_link}")
         return True
 
-    # 2. Fallback: Auto-download from Hugging Face
+    # 2. Fallback: Auto-download from Hugging Face (Filtered to Parquet/JSON/Zip only)
     if hf_repo_id:
         print(f"-> {dataset_name} not found in /kaggle/input. Auto-downloading from Hugging Face ({hf_repo_id})...")
         os.makedirs(target_link, exist_ok=True)
         try:
             from huggingface_hub import snapshot_download
-            snapshot_download(repo_id=hf_repo_id, repo_type="dataset", local_dir=target_link)
+            snapshot_download(
+                repo_id=hf_repo_id, 
+                repo_type="dataset", 
+                local_dir=target_link,
+                allow_patterns=["*.parquet", "*.parquet.gzip", "*.json", "*.csv", "*.txt", "*.zip"]
+            )
             success = True
         except Exception as err:
             print(f"snapshot_download fallback ({err}), trying CLI...")
-            cmd = f"huggingface-cli download {hf_repo_id} --repo-type dataset --local-dir {target_link}"
+            cmd = f"huggingface-cli download {hf_repo_id} --repo-type dataset --local-dir {target_link} --include '*.parquet' '*.json' '*.zip' '*.txt'"
             success = run_command(cmd)
 
         if success and post_download_cmd:
