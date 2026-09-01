@@ -205,10 +205,24 @@ Baseline-2 (ViT+PubMedBERT) & 0.9175 & 0.7010 & 0.8149 & 0.7230 & 0.6020 & 0.589
 }
 \end{table*}
 
-Beyond raw classification accuracy, CI-GCI demonstrates superior text generation quality on open-ended diagnostic queries, achieving a BLEU-4 score of 0.4120, ROUGE-L score of 0.6150, and BERTScore-F1 of 0.8620. Crucially, by performing physical counterfactual inpainting $do(I = I \setminus \text{ROI})$, CI-GCI reduces the visual hallucination rate from 38.50\% in standard baseline VLMs down to 10.80\%, while achieving an unprecedented Expected Calibration Error (ECE = 0.0215) and high diagnostic discrimination (AUROC = 0.9380).
+Beyond raw classification accuracy, CI-GCI demonstrates superior text generation quality on open-ended diagnostic queries, achieving a BLEU-4 score of 0.4120, ROUGE-L score of 0.6150, and BERTScore-F1 of 0.8620. Crucially, by performing physical counterfactual inpainting $do(I = I \setminus \text{ROI})$, CI-GCI reduces the visual hallucination rate from 38.50\% in standard baseline VLMs down to 10.80\%, while achieving an unprecedented Expected Calibration Error (ECE = 0.0221) and high diagnostic discrimination (AUROC = 0.9380).
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.92\textwidth]{Manuscript TMI/fig2_calibration_curves.png}
+\caption{Multi-Dataset Diagnostic Reliability Calibration Diagrams. Comparison of confidence vs. empirical accuracy across SLAKE, VQA-RAD, PathVQA, and Kvasir-VQA benchmarks. CQC-Net with Causal Contrastive Decoding (green) closely matches the diagonal perfect calibration line, suppressing overconfident diagnostic errors and cutting Expected Calibration Error (ECE) to 0.0221--0.0285.}
+\label{fig:calibration}
+\end{figure*}
 
 \subsection{Multi-Tiered Diagnostic Reasoning Breakdown}
 To analyze model performance under escalating levels of diagnostic reasoning complexity, we evaluate CI-GCI on the Kvasir-VQA-x1 multi-tiered benchmark \cite{jha2023}. The evaluation splits questions into Level 1 (perception and feature detection), Level 2 (spatial localization), and Level 3 (causal clinical reasoning).
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{Manuscript TMI/fig3_multimodal_proof_sheets.png}
+\caption{Multi-Modality Visual Counterfactual Proof Sheets. Qualitative case studies across Radiology (Chest CT), Endoscopy (Polyp Scan), and Histopathology (H\&E Stain). Columns illustrate: (1) Original patient radiograph $I$; (2) Gaze-guided attention ROI mask $\mathbf{M}$ conditioned on question $Q$; (3) Generatively synthesized counterfactual image $I_{\text{cf}}$ simulating $do(I = I \setminus \text{ROI})$; and (4) Prediction confidence and Individual Treatment Effect (ITE) distribution proving visual shortcut suppression.}
+\label{fig:proofs}
+\end{figure*}
 
 \begin{table*}[t]
 \caption{Kvasir-VQA-x1 Multi-Tiered Reasoning Breakdown}
@@ -232,6 +246,13 @@ As shown in Table~\ref{tab:reasoning}, CI-GCI achieves 91.20\% accuracy on Level
 
 \subsection{Hallucination Verification Performance}
 The efficacy of the dual-stage Consistency Head and hallucination verifier is evaluated against specialized detection baselines in Table~\ref{tab:hallucination}.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.92\textwidth]{Manuscript TMI/fig4_risk_coverage.png}
+\caption{Selective Abstention and Hallucination Mitigation Analysis. (a) Risk-coverage trade-off curves demonstrating that the decision-theoretic triage gate achieves a 2.4\% clinical error rate at 72.5\% patient coverage at operating threshold $\tau_2$. (b) Visual hallucination rates across escalating reasoning complexity levels (L1 perception, L2 localization, L3 causal reasoning), confirming consistent $>65\%$ relative error reduction over standard observational VLMs.}
+\label{fig:risk_coverage}
+\end{figure*}
 
 \begin{table*}[t]
 \caption{Hallucination Detection Performance}
