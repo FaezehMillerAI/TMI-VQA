@@ -152,6 +152,11 @@ def main():
     for ds in ["slake", "vqa_rad", "pathvqa", "kvasir", "ms_cxr"]:
         run_command(f"PYTHONPATH=. python3 scripts/benchmark_comparison.py --dataset {ds} --device {device}")
         
+    # 5.5 Export full per-sample prediction CSV logs
+    print("\nExporting full per-sample prediction logs...")
+    for ds in ["slake", "vqa_rad", "pathvqa", "kvasir"]:
+        run_command(f"PYTHONPATH=. python3 evaluation/export_detailed_predictions.py --dataset {ds} --device {device}")
+        
     # 6. Generate reliability diagrams and proof sheets
     print("\nGenerating plots and reliability diagrams...")
     run_command(f"PYTHONPATH=. python3 scripts/generate_plots_and_proofs.py --dataset slake --device {device}")
@@ -168,6 +173,7 @@ def main():
     print("  - Visual Proofs: outputs/proofs/")
     print("  - Reliability Plots: outputs/")
     print("  - SOTA & Ablation Tables: outputs/tables/")
+    print("  - Per-Sample Prediction Logs: outputs/logs/")
     print("==================================================")
 
 if __name__ == "__main__":
