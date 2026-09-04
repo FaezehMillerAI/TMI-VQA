@@ -24,3 +24,4 @@ __pycache__/
 # Ignore duplicate images and OS junk
 .DS_Store
 * (*).png
+MD TMI/

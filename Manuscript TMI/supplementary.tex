@@ -6,7 +6,7 @@
 \usepackage{cite}
 \usepackage{hyperref}
 
-\title{Supplementary Material: Causal-Interventional Grounding and Generative Counterfactual Inpainting (CI-GCI) for Calibrated Medical Visual Question Answering}
+\title{Supplementary Material: Causal-Interventional Grounding and Counterfactual Inpainting (CI-GCI) for Hallucination-Resistant and Calibrated Medical Visual Question Answering}
 
 \author{Faezeh Miller, \IEEEmembership{Graduate Student Member, IEEE}}
 
@@ -32,22 +32,22 @@ I \longleftarrow C \longrightarrow A.
 Consequently, the model minimizes training risk by fitting language shortcuts in $C$ rather than attending to true pathology in $I$.
 
 \noindent\textbf{Theorem 1 (Backdoor Separation under Generative Inpainting):} 
-Applying the physical generative counterfactual intervention $do(I = I \setminus \text{ROI})$ severs all incoming causal edges directed into $I$, rendering $I$ conditionally independent of confounder $C$:
+Applying the physical generative counterfactual intervention $do(I = I_{\text{cf}})$ severs all incoming causal edges directed into $I$, rendering $I$ conditionally independent of confounder $C$:
 \begin{equation}
-P(C \mid do(I=i), Q) = P(C \mid Q) = P(C).
+P(C \mid do(I=I_{\text{cf}}), Q) = P(C \mid Q) = P(C).
 \end{equation}
 
 \noindent\textbf{Proof:} 
-By Pearl's Second Rule of $do$-calculus (Action/Observation Exchange) \cite{pearl2009}, for any subset of variables $Z$ that d-separates $I$ from $A$ in the graph $\mathcal{G}_{\overline{I}}$ where incoming edges to $I$ are deleted:
+Under Pearl's causal intervention framework \cite{pearl2009}, the $do$-operator replaces the structural equation for $I$ with a constant assignment $I = I_{\text{cf}}$, removing all incoming edges into $I$ in the manipulated graph $\mathcal{G}_{\overline{I}}$. In $\mathcal{G}_{\overline{I}}$, the path $I \leftarrow C$ is broken, d-separating $I$ from $C$ conditioned on $Q$:
 \begin{align}
-P(A \mid do(I=i), Q) &= \sum_{c} P(A \mid do(I=i), Q, C=c) P(C=c \mid do(I=i)) \notag \\
-&= \sum_{c} P(A \mid I=i, Q, C=c) P(C=c).
+P(A \mid do(I=I_{\text{cf}}), Q) &= \sum_{c} P(A \mid do(I=I_{\text{cf}}), Q, C=c) P(C=c \mid do(I=I_{\text{cf}})) \notag \\
+&= \sum_{c} P(A \mid I=I_{\text{cf}}, Q, C=c) P(C=c).
 \end{align}
-Because the Generative Counterfactual Inpainter (CFI) produces a physically continuous radiograph $I_{\text{cf}}$ without altering non-ROI anatomical context, the contrastive logit difference strictly isolates the true Individual Treatment Effect (ITE):
+Because the Generative Counterfactual Inpainter (CFI) produces a physically continuous radiograph $I_{\text{cf}}$ without altering non-ROI anatomical context, the contrastive logit difference between the factual scan $I$ and counterfactual scan $I_{\text{cf}}$ isolates the counterfactual logit contrast:
 \begin{equation}
-\text{ITE}(I, Q) = \mathbf{L}_{\text{orig}}(I, Q) - \mathbf{L}_{\text{cf}}(I_{\text{cf}}, Q) = \mathbb{E}[Y \mid do(I = i)] - \mathbb{E}[Y \mid do(I = i_{\text{cf}})].
+\Delta \mathbf{L}(I, Q) = \mathbf{L}_{\text{orig}}(I, Q) - \mathbf{L}_{\text{cf}}(I_{\text{cf}}, Q).
 \end{equation}
-This completes the proof. $\blacksquare$
+This completes the derivation. $\blacksquare$
 
 \section{Hyperparameter Specifications and Training Regimes}
 \label{sec:hyperparameters}
@@ -73,8 +73,8 @@ Weight Decay & $1.0 \times 10^{-2}$ \\
 LR Scheduler & Cosine Annealing with 2-epoch linear warmup \\
 Inpainting Loss Weights & $\mathcal{L}_{\text{L1}}=1.0, \mathcal{L}_{\text{percep}}=0.1, \mathcal{L}_{\text{style}}=250.0$ \\
 Causal Dynamic Scale Init & $\gamma_0 = 1.50$ (learned via softplus head) \\
-Decision Gate Threshold $\tau_1$ & 0.65 (High-recall screening) \\
-Decision Gate Threshold $\tau_2$ & 0.85 (High-precision referral) \\
+Decision Gate Threshold $\tau_1$ & 0.65 (Screening operational point) \\
+Decision Gate Threshold $\tau_2$ & 0.85 (Triage referral operational point) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -82,13 +82,12 @@ Decision Gate Threshold $\tau_2$ & 0.85 (High-precision referral) \\
 \section{Selective Abstention and Decision Triage Derivation}
 \label{sec:abstention}
 
-To quantify the optimal referral threshold $\tau \in [0, 1]$, we formulate clinical triage under a bounded cost-loss utility framework. Let $c_e$ denote the clinical cost of an automated erroneous diagnosis (e.g., missed malignant nodule), and let $c_r$ denote the administrative referral cost to an attending radiologist ($c_r \ll c_e$).
+To quantify the optimal referral threshold $\tau \in [0, 1]$, we formulate clinical triage under a bounded cost-loss utility framework. Let $c_e$ denote the clinical cost of an automated erroneous diagnosis, and let $c_r$ denote the administrative referral cost to an attending radiologist ($c_r \ll c_e$).
 
 The expected clinical risk $\mathcal{R}(\tau)$ over the interventional probability distribution $P(A \mid do(I), Q)$ is defined as:
 \begin{equation}
 \mathcal{R}(\tau) = \mathbb{E}_{(I, Q)}\left[ c_e \cdot \mathbf{1}(\hat{A} \ne Y) \cdot \mathbf{1}(\max_a P(a) \ge \tau) + c_r \cdot \mathbf{1}(\max_a P(a) < \tau) \right].
 \end{equation}
-At operational operating point $\tau_2 = 0.85$, the triage gate achieves a clinical error rate of 2.4\% across 72.5\% automated coverage on SLAKE and VQA-RAD test benchmarks.
 
 \bibliographystyle{IEEEtran}
 \begin{thebibliography}{1}
