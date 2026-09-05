@@ -39,14 +39,14 @@ DEFAULT_MACROS = {
     "SlakeCiGciAccVal": "0.812",
     "PathvqaCiGciAcc": "69.20\\%",
     "PathvqaCiGciAccVal": "0.692",
-    "KvasirX1CiGciAcc": "82.40\\%",
-    "KvasirX1CiGciAccVal": "0.824",
+    "KvasirXOneCiGciAcc": "82.40\\%",
+    "KvasirXOneCiGciAccVal": "0.824",
 
     # Calibration ECE
     "VqaRadCiGciEce": "0.0215",
     "SlakeCiGciEce": "0.0221",
     "PathvqaCiGciEce": "0.0280",
-    "KvasirX1CiGciEce": "0.0234",
+    "KvasirXOneCiGciEce": "0.0234",
 
     # Relative Reductions
     "EceRelReductionMax": "88.1\\%",
@@ -183,8 +183,15 @@ def build_canonical(
                 canonical["models"][ds][m]["acc"] = {"mean": acc_mean, "std": 0.0}
                 canonical["models"][ds][m]["ece"] = {"mean": ece_mean, "std": 0.0}
 
+            digit_map = {
+                "0": "Zero", "1": "One", "2": "Two", "3": "Three", "4": "Four",
+                "5": "Five", "6": "Six", "7": "Seven", "8": "Eight", "9": "Nine"
+            }
             ds_camel = "".join(w.capitalize() for w in ds.split("_"))
             m_camel = "".join(w.capitalize() for w in m.split("_"))
+            for d, word in digit_map.items():
+                ds_camel = ds_camel.replace(d, word)
+                m_camel = m_camel.replace(d, word)
 
             macro_dict[f"{ds_camel}{m_camel}Acc"] = f"{acc_mean*100:.2f}\\%"
             macro_dict[f"{ds_camel}{m_camel}AccVal"] = f"{acc_mean:.3f}"
