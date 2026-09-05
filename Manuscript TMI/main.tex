@@ -142,6 +142,7 @@ While generating $I_{\text{cf}}$ using a question-conditioned mask conditions on
 \caption{Mathematical Notation Registry}
 \label{tab:notation}
 \centering
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{ll}
 \toprule
 \textbf{Symbol} & \textbf{Mathematical Definition} \\
@@ -163,7 +164,8 @@ $H, W$ & Image spatial height and width ($224 \times 224$ pixels) \\
 $C \in \mathcal{C}$ & Unobserved dataset confounding / reporting bias \\
 $A \in \mathcal{A}$ & Predicted clinical diagnostic answer / class \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \subsection{Question-Conditioned ROI Localization (QCRL)}
@@ -249,7 +251,7 @@ To evaluate the generalization, calibration, and hallucination resistance of the
 \caption{Benchmark Dataset Statistics and Clinical Characteristics}
 \label{tab:dataset_stats}
 \centering
-\setlength{\tabcolsep}{5pt}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{lcccccc}
 \toprule
 \textbf{Dataset} & \textbf{Modality / Clinical Domain} & \textbf{Total Images} & \textbf{Total QA Pairs} & \textbf{Closed / Open Split} & \textbf{Answer Vocab ($K$)} & \textbf{Evaluation Split} \\
@@ -260,7 +262,8 @@ PathVQA \cite{he2020pathvqa} & Histopathology Biopsy H\&E Stains & 4,998 & 32,79
 Kvasir-VQA-x1 \cite{jha2023} & Gastrointestinal Endoscopy & 1,500 & 6,500 & 62.5\% / 37.5\% & 185 & 1,300 test QA pairs \\
 MS-CXR \cite{boecking2022} & Chest Radiographs (MIMIC-CXR) & 1,162 & 1,162 & Grounding Phrases & Bounding Boxes & 1,162 localized pairs \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table*}
 
 The VQA-RAD benchmark \cite{lau2018} comprises 315 radiological images paired with 3,515 clinically generated question-answer pairs curated by board-certified radiologists. The images span three major anatomical regions: 104 head CT scans, 107 chest radiographs, and 104 abdominal MRI scans. We adopt the standard split containing 3,064 training/validation QA pairs and 451 independent test QA pairs.
@@ -293,7 +296,7 @@ Table~\ref{tab:sota_benchmark} compares CI-GCI directly with published state-of-
 \caption{Benchmark Comparison Against Published SOTA Models}
 \label{tab:sota_benchmark}
 \centering
-\setlength{\tabcolsep}{4pt}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Model} & \textbf{Venue / Year} & \textbf{VQA-RAD} & \textbf{SLAKE} & \textbf{PathVQA} \\
@@ -311,7 +314,8 @@ DE-CaGI \cite{liu2025decagi} & MedIA 2025 & 0.848 & 0.798 & 0.651 \\
 \midrule
 \textbf{Proposed CI-GCI} & \textbf{This Work} & \textbf{\CanonVqaRadCiGciAccVal} & \textbf{\CanonSlakeCiGciAccVal} & \textbf{\CanonPathvqaCiGciAccVal} \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \noindent\textbf{Critical Analysis of Baseline Comparison:}
@@ -331,17 +335,18 @@ To validate that generative inpainting reliably neutralizes pathology without in
 \caption{Automated Counterfactual Inpainting Fidelity Evaluation}
 \label{tab:fidelity}
 \centering
-\setlength{\tabcolsep}{4pt}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcc}
 \toprule
 \textbf{Fidelity Dimension} & \textbf{Quantitative Metric} & \textbf{Observed Value} \\
 \midrule
-Target Pathology Probability Drop ($\Delta P_{\text{target}}$) & Independent Classifier & $\CanonFidelityDeltaTarget$ \\
+Target Pathology Drop ($\Delta P_{\text{target}}$) & Independent Classifier & $\CanonFidelityDeltaTarget$ \\
 Non-Target Finding Stability & TOST Equivalence ($\delta = 0.05$) & $\CanonFidelityTostP$ (Equivalent) \\
-Background Preservation Outside Mask & PSNR / SSIM & \CanonFidelityPsnr{} / \CanonFidelitySsim{} (Sanity Check) \\
-Distributional Patch Realism & Discriminator ROC-AUC & $\CanonFidelityDiscrimAuc$ (Ideal $\approx 0.50$) \\
+Background Preservation & PSNR / SSIM & \CanonFidelityPsnr{} / \CanonFidelitySsim{} \\
+Distributional Patch Realism & Discriminator ROC-AUC & $\CanonFidelityDiscrimAuc$ \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 As shown in Table~\ref{tab:fidelity}, an independently trained pathology classifier exhibits a substantial average probability drop ($\Delta P_{\text{target}} = \CanonFidelityDeltaTarget$) on the target finding when evaluated on $I_{\text{cf}}$ compared to $I$. Concurrently, non-target finding probabilities demonstrate strict statistical equivalence under Two One-Sided Tests (TOST, $\CanonFidelityTostP$ with $\delta = 0.05$), confirming that no spurious artifacts are introduced. Background anatomy outside the lesion mask is preserved near-identically by construction (PSNR = \CanonFidelityPsnr{}, SSIM = \CanonFidelitySsim{}), serving as an essential sanity check. A linear patch discriminator achieves an AUC of $\CanonFidelityDiscrimAuc$, confirming that inpainted tissue is distributionally indistinguishable from real healthy tissue.
@@ -360,7 +365,7 @@ To demonstrate that generative inpainting is indispensable compared to naive spa
 \caption{Ablation of Visual Intervention Modes}
 \label{tab:ablation_inpainter}
 \centering
-\setlength{\tabcolsep}{4pt}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Intervention Mode} & \textbf{VQA-RAD} & \textbf{SLAKE} & \textbf{Halluc. $\downarrow$} & \textbf{ECE $\downarrow$} \\
@@ -371,7 +376,8 @@ Nearest-Neighbor Patch Fill & \CanonAblationNearestVqaRadAcc & \CanonAblationNea
 \midrule
 \textbf{Generative Inpainting (CFI - Proposed)} & \textbf{\CanonAblationCiGciVqaRadAcc} & \textbf{\CanonAblationCiGciSlakeAcc} & \textbf{\CanonAblationCiGciHalluc} & \textbf{\CanonAblationCiGciEce} \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 As shown in Table~\ref{tab:ablation_inpainter}, black-box zero-masking and Gaussian blur create unnatural edge artifacts that corrupt feature representations, yielding higher hallucination rates (\CanonAblationZeroHalluc{} and \CanonAblationBlurHalluc{}). Photorealistic generative inpainting achieves the lowest hallucination rate (\CanonAblationCiGciHalluc{}) and best calibration (ECE = \CanonAblationCiGciEce).
