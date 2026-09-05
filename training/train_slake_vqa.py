@@ -168,7 +168,7 @@ def train_vqa(dataset_name="slake", data_dir="data/", config_path="configs/basel
         total = 0
         
         # Training loop
-        progress_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs}")
+        progress_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs} [Train]", unit="batch", leave=False)
         for batch in progress_bar:
             images = batch["image"].to(device)
             questions = batch["question"]
@@ -190,7 +190,7 @@ def train_vqa(dataset_name="slake", data_dir="data/", config_path="configs/basel
             correct += (preds == labels).sum().item()
             total += labels.size(0)
             
-            progress_bar.set_postfix(loss=loss.item(), acc=correct/total)
+            progress_bar.set_postfix(loss=f"{loss.item():.3f}", acc=f"{correct/total:.3f}")
             
         epoch_loss = epoch_loss / total
         train_acc = correct / total
@@ -199,8 +199,9 @@ def train_vqa(dataset_name="slake", data_dir="data/", config_path="configs/basel
         model.eval()
         val_correct = 0
         val_total = 0
+        val_pbar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{epochs} [Val]", unit="batch", leave=False)
         with torch.no_grad():
-            for batch in val_loader:
+            for batch in val_pbar:
                 images = batch["image"].to(device)
                 questions = batch["question"]
                 answers = batch["answer"]
@@ -212,9 +213,10 @@ def train_vqa(dataset_name="slake", data_dir="data/", config_path="configs/basel
                 preds = torch.argmax(logits, dim=-1)
                 val_correct += (preds == labels).sum().item()
                 val_total += labels.size(0)
+                val_pbar.set_postfix(acc=f"{val_correct/val_total:.3f}")
                 
         val_acc = val_correct / val_total
-        print(f"Epoch {epoch+1} - Train Loss: {epoch_loss:.4f} | Train Acc: {train_acc:.4f} | Val Acc: {val_acc:.4f}")
+        print(f"Epoch {epoch+1}/{epochs} - Train Loss: {epoch_loss:.4f} | Train Acc: {train_acc:.4f} | Val Acc: {val_acc:.4f}", flush=True)
         
         if val_acc > best_val_acc:
             best_val_acc = val_acc

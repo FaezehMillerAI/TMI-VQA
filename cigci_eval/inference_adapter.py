@@ -13,6 +13,7 @@ import time
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from cigci_eval.records import (
     PredictionRecord,
@@ -111,8 +112,9 @@ def run_dataset_inference(
 
     records: list[PredictionRecord] = []
 
+    pbar = tqdm(dataloader, desc=f"Evaluating {model_name} on {dataset_name} (seed {seed})", unit="batch", leave=False)
     with torch.no_grad():
-        for batch_idx, batch in enumerate(dataloader):
+        for batch_idx, batch in enumerate(pbar):
             images = batch["image"].to(device)
             masks = batch["mask"].to(device)
             questions = batch["question"]

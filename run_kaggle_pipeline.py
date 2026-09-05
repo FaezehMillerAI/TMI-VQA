@@ -14,16 +14,16 @@ import sys
 import shutil
 import argparse
 import zipfile
+from tqdm import tqdm
 
 
 def run_command(cmd_str):
-    print(f"\n[EXEC] {cmd_str}")
-    process = subprocess.Popen(cmd_str, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    for line in process.stdout:
-        print(line, end="")
-    process.wait()
-    if process.returncode != 0:
-        print(f"Error: Command failed with exit code {process.returncode}")
+    print(f"\n[EXEC] {cmd_str}", flush=True)
+    env = os.environ.copy()
+    env["PYTHONUNBUFFERED"] = "1"
+    res = subprocess.run(cmd_str, shell=True, env=env)
+    if res.returncode != 0:
+        print(f"\nError: Command failed with exit code {res.returncode}", flush=True)
         return False
     return True
 
@@ -100,32 +100,61 @@ def main():
 
     # 2. Model Training / Fine-tuning
     if not args.skip_train:
-        print("\n[Step 2/5] Training inpainter and fine-tuning models across seeds...")
+        print("\n==================================================")
+        print("  PHASE 2/5: MODEL TRAINING ACROSS SEEDS          ")
+        print("==================================================")
+        print("-> Training inpainter...")
         run_command(f"PYTHONPATH=. python3 training/train_inpainter.py --epochs 5 --batch_size {args.batch_size} --device {device}")
+
+        training_tasks = []
         for s in args.seeds:
             for ds in ["slake", "vqa_rad", "pathvqa", "kvasir"]:
-                run_command(f"PYTHONPATH=. python3 training/train_slake_vqa.py --dataset {ds} --epochs {args.epochs} --batch_size {args.batch_size} --device {device}")
+                training_tasks.append((s, ds))
+
+        train_pbar = tqdm(training_tasks, desc="Phase 2/5: Training Models", unit="model")
+        for s, ds in train_pbar:
+            train_pbar.set_postfix(dataset=ds.upper(), seed=s)
+            run_command(f"PYTHONPATH=. python3 training/train_slake_vqa.py --dataset {ds} --epochs {args.epochs} --batch_size {args.batch_size} --device {device}")
 
     # 3. Layer 1 Inference: Emit conforming records.jsonl
-    print("\n[Step 3/5] Running Layer 1 inference and emitting per-sample PredictionRecords...")
+    print("\n==================================================")
+    print("  PHASE 3/5: TEST INFERENCE & RECORD GENERATION   ")
+    print("==================================================")
+    infer_tasks = []
     for s in args.seeds:
         for ds in ["slake", "vqa_rad", "pathvqa", "kvasir_x1"]:
             for m in ["ci_gci", "baseline_1", "baseline_2"]:
-                run_command(f"PYTHONPATH=. python3 cigci_eval/inference_adapter.py --dataset {ds} --model {m} --seed {s} --device {device}")
+                infer_tasks.append((s, ds, m))
+
+    infer_pbar = tqdm(infer_tasks, desc="Phase 3/5: Test Inference", unit="split")
+    for s, ds, m in infer_pbar:
+        infer_pbar.set_postfix(dataset=ds.upper(), model=m, seed=s)
+        run_command(f"PYTHONPATH=. python3 cigci_eval/inference_adapter.py --dataset {ds} --model {m} --seed {s} --device {device}")
 
     # Decisive Inpainting Mode Ablation (Task 8: Diffusion vs Black-Box vs Gaussian Blur vs Nearest)
-    print("\n[Step 3b/5] Running Decisive Inpainting Mode Ablations...")
+    print("\n==================================================")
+    print("  PHASE 3b/5: INPAINTING ABLATION INFERENCE       ")
+    print("==================================================")
+    ablation_tasks = []
     for m_abl in ["ablation_zero", "ablation_blur", "ablation_nearest"]:
         for ds in ["slake", "vqa_rad"]:
-            run_command(f"PYTHONPATH=. python3 cigci_eval/inference_adapter.py --dataset {ds} --model {m_abl} --seed 42 --device {device}")
+            ablation_tasks.append((m_abl, ds))
+
+    abl_pbar = tqdm(ablation_tasks, desc="Phase 3b/5: Ablations", unit="mode")
+    for m_abl, ds in abl_pbar:
+        abl_pbar.set_postfix(mode=m_abl, dataset=ds.upper())
+        run_command(f"PYTHONPATH=. python3 cigci_eval/inference_adapter.py --dataset {ds} --model {m_abl} --seed 42 --device {device}")
 
     # 4. Layer 2: Automated Counterfactual Fidelity Evaluation
-    print("\n[Step 4/5] Evaluating image-domain counterfactual fidelity...")
-    # Computes real PSNR/SSIM outside mask and independent classifier attenuation
+    print("\n==================================================")
+    print("  PHASE 4/5: AUTOMATED COUNTERFACTUAL FIDELITY    ")
+    print("==================================================")
     run_command("PYTHONPATH=. pytest -v tests/test_fidelity.py")
 
     # 5. Layer 3: Build Canonical Metrics & LaTeX Macros
-    print("\n[Step 5/5] Aggregating canonical metrics and compiling macros.tex...")
+    print("\n==================================================")
+    print("  PHASE 5/5: CANONICAL AGGREGATION & PACKAGING     ")
+    print("==================================================")
     run_command("PYTHONPATH=. python3 scripts/build_canonical.py --allow-missing")
 
     # Package outputs
