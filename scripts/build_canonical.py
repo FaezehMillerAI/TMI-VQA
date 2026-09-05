@@ -117,7 +117,8 @@ def build_canonical(
                     try:
                         seed_val = int(seed_dir.name.split("_")[1])
                         records, manifest = read_run(record_file)
-                        data_store[ds][m][seed_val] = records
+                        if records and len(records) > 0:
+                            data_store[ds][m][seed_val] = records
                     except Exception as err:
                         print(f"Error reading {record_file}: {err}")
 
@@ -147,13 +148,18 @@ def build_canonical(
             f1_list = []
 
             for s, recs in seeds.items():
+                if not recs or len(recs) == 0:
+                    continue
                 acc_list.append(accuracy(recs))
                 ece_list.append(ece(recs))
                 brier_list.append(brier_score(recs))
                 f1_list.append(macro_f1(recs))
 
+            if not acc_list:
+                continue
+
             canonical["models"][ds][m] = {
-                "n_seeds": len(seeds),
+                "n_seeds": len(acc_list),
                 "acc_raw": acc_list,
                 "ece_raw": ece_list,
                 "brier_raw": brier_list,
