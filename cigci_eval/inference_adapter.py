@@ -112,13 +112,16 @@ def run_dataset_inference(
 
     records: list[PredictionRecord] = []
 
-    pbar = tqdm(dataloader, desc=f"Evaluating {model_name} on {dataset_name} (seed {seed})", unit="batch", leave=False)
+    pbar = tqdm(dataloader, desc=f"Evaluating {model_name} on {dataset_name} (seed {seed})", unit="batch", file=sys.stdout, leave=True, ncols=100)
     with torch.no_grad():
         for batch_idx, batch in enumerate(pbar):
             images = batch["image"].to(device)
             masks = batch["mask"].to(device)
             questions = batch["question"]
             answers = batch["answer"]
+
+            if (batch_idx + 1) % 20 == 0 or (batch_idx + 1) == len(dataloader):
+                print(f"  [{dataset_name.upper()} | {model_name} | Seed {seed}] Batch {batch_idx+1}/{len(dataloader)} evaluated...", flush=True)
 
             # Factual Pass
             orig_out = vqa_model(images, questions, device)

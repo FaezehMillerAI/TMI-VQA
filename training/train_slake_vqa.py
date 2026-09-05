@@ -168,8 +168,8 @@ def train_vqa(dataset_name="slake", data_dir="data/", config_path="configs/basel
         total = 0
         
         # Training loop
-        progress_bar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs} [Train]", unit="batch", leave=False)
-        for batch in progress_bar:
+        progress_bar = tqdm(train_loader, desc=f"[{dataset_name.upper()}] Epoch {epoch+1}/{epochs} [Train]", unit="batch", file=sys.stdout, leave=True, ncols=100)
+        for step, batch in enumerate(progress_bar):
             images = batch["image"].to(device)
             questions = batch["question"]
             answers = batch["answer"]
@@ -191,6 +191,8 @@ def train_vqa(dataset_name="slake", data_dir="data/", config_path="configs/basel
             total += labels.size(0)
             
             progress_bar.set_postfix(loss=f"{loss.item():.3f}", acc=f"{correct/total:.3f}")
+            if (step + 1) % 25 == 0 or (step + 1) == len(train_loader):
+                print(f"  [{dataset_name.upper()}] Epoch {epoch+1}/{epochs} | Batch {step+1}/{len(train_loader)} | Loss: {loss.item():.4f} | Acc: {correct/total:.3f}", flush=True)
             
         epoch_loss = epoch_loss / total
         train_acc = correct / total
@@ -199,9 +201,9 @@ def train_vqa(dataset_name="slake", data_dir="data/", config_path="configs/basel
         model.eval()
         val_correct = 0
         val_total = 0
-        val_pbar = tqdm(val_loader, desc=f"Epoch {epoch+1}/{epochs} [Val]", unit="batch", leave=False)
+        val_pbar = tqdm(val_loader, desc=f"[{dataset_name.upper()}] Epoch {epoch+1}/{epochs} [Val]", unit="batch", file=sys.stdout, leave=True, ncols=100)
         with torch.no_grad():
-            for batch in val_pbar:
+            for v_step, batch in enumerate(val_pbar):
                 images = batch["image"].to(device)
                 questions = batch["question"]
                 answers = batch["answer"]
@@ -216,7 +218,7 @@ def train_vqa(dataset_name="slake", data_dir="data/", config_path="configs/basel
                 val_pbar.set_postfix(acc=f"{val_correct/val_total:.3f}")
                 
         val_acc = val_correct / val_total
-        print(f"Epoch {epoch+1}/{epochs} - Train Loss: {epoch_loss:.4f} | Train Acc: {train_acc:.4f} | Val Acc: {val_acc:.4f}", flush=True)
+        print(f"[{dataset_name.upper()}] Epoch {epoch+1}/{epochs} - Train Loss: {epoch_loss:.4f} | Train Acc: {train_acc:.4f} | Val Acc: {val_acc:.4f}", flush=True)
         
         if val_acc > best_val_acc:
             best_val_acc = val_acc

@@ -1,3 +1,4 @@
+import sys
 import os
 import argparse
 import torch
@@ -9,7 +10,7 @@ from models.inpainter import CounterfactualInpainter
 from tqdm import tqdm
 
 def train_inpainter(data_dir, epochs=5, batch_size=8, lr=1e-4, device="cpu"):
-    print(f"Starting inpainter training on device: {device}")
+    print(f"Starting inpainter training on device: {device}", flush=True)
     
     # Paths
     json_path = os.path.join(data_dir, "train.json")
@@ -30,8 +31,8 @@ def train_inpainter(data_dir, epochs=5, batch_size=8, lr=1e-4, device="cpu"):
     
     for epoch in range(epochs):
         epoch_loss = 0.0
-        loop = tqdm(dataloader, desc=f"Epoch {epoch+1}/{epochs}")
-        for batch in loop:
+        loop = tqdm(dataloader, desc=f"[Inpainter] Epoch {epoch+1}/{epochs}", file=sys.stdout, leave=True, ncols=100)
+        for i, batch in enumerate(loop):
             images = batch["image"].to(device)
             masks = batch["mask"].to(device)
             
@@ -50,10 +51,12 @@ def train_inpainter(data_dir, epochs=5, batch_size=8, lr=1e-4, device="cpu"):
             optimizer.step()
             
             epoch_loss += loss.item()
-            loop.set_postfix(loss=loss.item())
+            loop.set_postfix(loss=f"{loss.item():.4f}")
+            if (i + 1) % 25 == 0 or (i + 1) == len(dataloader):
+                print(f"  [Inpainter] Epoch {epoch+1}/{epochs} | Batch {i+1}/{len(dataloader)} | Loss: {loss.item():.4f}", flush=True)
             
         avg_loss = epoch_loss / len(dataloader)
-        print(f"Epoch {epoch+1} Complete. Average Loss: {avg_loss:.6f}")
+        print(f"[Inpainter] Epoch {epoch+1} Complete. Average Loss: {avg_loss:.6f}", flush=True)
         
     # Save checkpoint
     os.makedirs("models", exist_ok=True)

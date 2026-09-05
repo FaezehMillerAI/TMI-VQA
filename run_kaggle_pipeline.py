@@ -21,7 +21,11 @@ def run_command(cmd_str):
     print(f"\n[EXEC] {cmd_str}", flush=True)
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"
+    sys.stdout.flush()
+    sys.stderr.flush()
     res = subprocess.run(cmd_str, shell=True, env=env)
+    sys.stdout.flush()
+    sys.stderr.flush()
     if res.returncode != 0:
         print(f"\nError: Command failed with exit code {res.returncode}", flush=True)
         return False
@@ -103,59 +107,59 @@ def main():
         print("\n==================================================")
         print("  PHASE 2/5: MODEL TRAINING ACROSS SEEDS          ")
         print("==================================================")
-        print("-> Training inpainter...")
-        run_command(f"PYTHONPATH=. python3 training/train_inpainter.py --epochs 5 --batch_size {args.batch_size} --device {device}")
+        print("-> Training inpainter...", flush=True)
+        run_command(f"PYTHONPATH=. python3 -u training/train_inpainter.py --epochs 5 --batch_size {args.batch_size} --device {device}")
 
         training_tasks = []
         for s in args.seeds:
             for ds in ["slake", "vqa_rad", "pathvqa", "kvasir"]:
                 training_tasks.append((s, ds))
 
-        train_pbar = tqdm(training_tasks, desc="Phase 2/5: Training Models", unit="model")
+        train_pbar = tqdm(training_tasks, desc="Phase 2/5: Training Models", unit="model", file=sys.stdout, leave=True, ncols=100)
         for s, ds in train_pbar:
             train_pbar.set_postfix(dataset=ds.upper(), seed=s)
-            run_command(f"PYTHONPATH=. python3 training/train_slake_vqa.py --dataset {ds} --epochs {args.epochs} --batch_size {args.batch_size} --device {device}")
+            run_command(f"PYTHONPATH=. python3 -u training/train_slake_vqa.py --dataset {ds} --epochs {args.epochs} --batch_size {args.batch_size} --device {device}")
 
     # 3. Layer 1 Inference: Emit conforming records.jsonl
-    print("\n==================================================")
-    print("  PHASE 3/5: TEST INFERENCE & RECORD GENERATION   ")
-    print("==================================================")
+    print("\n==================================================", flush=True)
+    print("  PHASE 3/5: TEST INFERENCE & RECORD GENERATION   ", flush=True)
+    print("==================================================", flush=True)
     infer_tasks = []
     for s in args.seeds:
         for ds in ["slake", "vqa_rad", "pathvqa", "kvasir_x1"]:
             for m in ["ci_gci", "baseline_1", "baseline_2"]:
                 infer_tasks.append((s, ds, m))
 
-    infer_pbar = tqdm(infer_tasks, desc="Phase 3/5: Test Inference", unit="split")
+    infer_pbar = tqdm(infer_tasks, desc="Phase 3/5: Test Inference", unit="split", file=sys.stdout, leave=True, ncols=100)
     for s, ds, m in infer_pbar:
         infer_pbar.set_postfix(dataset=ds.upper(), model=m, seed=s)
-        run_command(f"PYTHONPATH=. python3 cigci_eval/inference_adapter.py --dataset {ds} --model {m} --seed {s} --device {device}")
+        run_command(f"PYTHONPATH=. python3 -u cigci_eval/inference_adapter.py --dataset {ds} --model {m} --seed {s} --device {device}")
 
     # Decisive Inpainting Mode Ablation (Task 8: Diffusion vs Black-Box vs Gaussian Blur vs Nearest)
-    print("\n==================================================")
-    print("  PHASE 3b/5: INPAINTING ABLATION INFERENCE       ")
-    print("==================================================")
+    print("\n==================================================", flush=True)
+    print("  PHASE 3b/5: INPAINTING ABLATION INFERENCE       ", flush=True)
+    print("==================================================", flush=True)
     ablation_tasks = []
     for m_abl in ["ablation_zero", "ablation_blur", "ablation_nearest"]:
         for ds in ["slake", "vqa_rad"]:
             ablation_tasks.append((m_abl, ds))
 
-    abl_pbar = tqdm(ablation_tasks, desc="Phase 3b/5: Ablations", unit="mode")
+    abl_pbar = tqdm(ablation_tasks, desc="Phase 3b/5: Ablations", unit="mode", file=sys.stdout, leave=True, ncols=100)
     for m_abl, ds in abl_pbar:
         abl_pbar.set_postfix(mode=m_abl, dataset=ds.upper())
-        run_command(f"PYTHONPATH=. python3 cigci_eval/inference_adapter.py --dataset {ds} --model {m_abl} --seed 42 --device {device}")
+        run_command(f"PYTHONPATH=. python3 -u cigci_eval/inference_adapter.py --dataset {ds} --model {m_abl} --seed 42 --device {device}")
 
     # 4. Layer 2: Automated Counterfactual Fidelity Evaluation
-    print("\n==================================================")
-    print("  PHASE 4/5: AUTOMATED COUNTERFACTUAL FIDELITY    ")
-    print("==================================================")
+    print("\n==================================================", flush=True)
+    print("  PHASE 4/5: AUTOMATED COUNTERFACTUAL FIDELITY    ", flush=True)
+    print("==================================================", flush=True)
     run_command("PYTHONPATH=. pytest -v tests/test_fidelity.py")
 
     # 5. Layer 3: Build Canonical Metrics & LaTeX Macros
-    print("\n==================================================")
-    print("  PHASE 5/5: CANONICAL AGGREGATION & PACKAGING     ")
-    print("==================================================")
-    run_command("PYTHONPATH=. python3 scripts/build_canonical.py --allow-missing")
+    print("\n==================================================", flush=True)
+    print("  PHASE 5/5: CANONICAL AGGREGATION & PACKAGING     ", flush=True)
+    print("==================================================", flush=True)
+    run_command("PYTHONPATH=. python3 -u scripts/build_canonical.py --allow-missing")
 
     # Package outputs
     zip_path = "outputs_cigci_verified.zip"
