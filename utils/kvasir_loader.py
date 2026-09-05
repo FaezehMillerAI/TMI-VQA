@@ -27,26 +27,20 @@ class KvasirCausalDataset(Dataset):
         self.img_size = img_size
         self.data = []
 
-        # Find matching parquet files
+        # Find matching parquet files (recursive search)
         if self.split in ["train", "training"]:
-            pattern = os.path.join(self.data_dir, "train-*.parquet")
+            pattern = os.path.join(self.data_dir, "**", "train*.parquet")
         elif self.split in ["test", "testing", "val", "validation"]:
-            pattern = os.path.join(self.data_dir, "test-*.parquet")
+            pattern = os.path.join(self.data_dir, "**", "test*.parquet")
         else:
-            pattern = os.path.join(self.data_dir, "*.parquet")
+            pattern = os.path.join(self.data_dir, "**", "*.parquet")
 
-        parquet_files = sorted(glob.glob(pattern))
+        parquet_files = sorted(glob.glob(pattern, recursive=True))
         
         # Fallback to Kvasir root folder if not in data/kvasir
         if not parquet_files:
             alt_dir = "Kvasir" if not os.path.exists(self.data_dir) else self.data_dir
-            if self.split in ["train", "training"]:
-                pattern = os.path.join(alt_dir, "train-*.parquet")
-            elif self.split in ["test", "testing", "val", "validation"]:
-                pattern = os.path.join(alt_dir, "test-*.parquet")
-            else:
-                pattern = os.path.join(alt_dir, "*.parquet")
-            parquet_files = sorted(glob.glob(pattern))
+            parquet_files = sorted(glob.glob(os.path.join(alt_dir, "**", "*.parquet"), recursive=True))
 
         if parquet_files and HAS_PARQUET:
             print(f"[Kvasir-VQA] Loading {len(parquet_files)} parquet files for split '{self.split}'...")

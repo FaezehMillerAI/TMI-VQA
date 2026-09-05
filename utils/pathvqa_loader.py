@@ -27,30 +27,22 @@ class PathVQACausalDataset(Dataset):
         self.img_size = img_size
         self.data = []
 
-        # Find matching parquet files
+        # Find matching parquet files (recursive search to support any nested HF directory)
         if self.split in ["train", "training"]:
-            pattern = os.path.join(self.data_dir, "train-*.parquet")
+            pattern = os.path.join(self.data_dir, "**", "train*.parquet")
         elif self.split in ["val", "valid", "validation"]:
-            pattern = os.path.join(self.data_dir, "validation-*.parquet")
+            pattern = os.path.join(self.data_dir, "**", "*val*.parquet")
         elif self.split in ["test", "testing"]:
-            pattern = os.path.join(self.data_dir, "test-*.parquet")
+            pattern = os.path.join(self.data_dir, "**", "test*.parquet")
         else:
-            pattern = os.path.join(self.data_dir, "*.parquet")
+            pattern = os.path.join(self.data_dir, "**", "*.parquet")
 
-        parquet_files = sorted(glob.glob(pattern))
+        parquet_files = sorted(glob.glob(pattern, recursive=True))
         
         # If no split-specific files found, search root PathVQA dir or data/pathvqa
         if not parquet_files:
             alt_dir = "PathVQA" if not os.path.exists(self.data_dir) else self.data_dir
-            if self.split in ["train", "training"]:
-                pattern = os.path.join(alt_dir, "train-*.parquet")
-            elif self.split in ["val", "valid", "validation"]:
-                pattern = os.path.join(alt_dir, "validation-*.parquet")
-            elif self.split in ["test", "testing"]:
-                pattern = os.path.join(alt_dir, "test-*.parquet")
-            else:
-                pattern = os.path.join(alt_dir, "*.parquet")
-            parquet_files = sorted(glob.glob(pattern))
+            parquet_files = sorted(glob.glob(os.path.join(alt_dir, "**", "*.parquet"), recursive=True))
 
         if parquet_files and HAS_PARQUET:
             print(f"[PathVQA] Loading {len(parquet_files)} parquet files for split '{self.split}'...")
