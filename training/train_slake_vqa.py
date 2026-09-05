@@ -131,14 +131,23 @@ def train_vqa(dataset_name="slake", data_dir="data/", config_path="configs/basel
     # Initialize Model
     model = CQCNet(config).to(device)
     
-    # We load pre-trained weights if available to speed up convergence
-    baseline_chk = "outputs/checkpoints/baseline/best_baseline_model.pt"
-    if os.path.exists(baseline_chk):
+    # Load pre-trained visual/text backbone weights if available to accelerate convergence
+    candidate_chk = None
+    for cand in [f"models/{dataset_name}_vqa_model.pth", "models/slake_vqa_model.pth", "outputs/checkpoints/baseline/best_baseline_model.pt"]:
+        if os.path.exists(cand):
+            candidate_chk = cand
+            break
+            
+    if candidate_chk:
         try:
-            print(f"Initializing with pre-trained visual/text encoders from {baseline_chk}")
-            model.load_state_dict(torch.load(baseline_chk, map_location=device), strict=False)
+            print(f"Initializing backbone encoders from {candidate_chk}...")
+            ckpt = torch.load(candidate_chk, map_location=device)
+            model_dict = model.state_dict()
+            matched_dict = {k: v for k, v in ckpt.items() if k in model_dict and v.shape == model_dict[k].shape}
+            print(f"-> Successfully loaded {len(matched_dict)}/{len(model_dict)} matching tensor layers.")
+            model.load_state_dict(matched_dict, strict=False)
         except Exception as e:
-            print(f"Skipping legacy baseline checkpoint due to dimension mismatch: {e}")
+            print(f"Notice: proceeding with fresh backbone initialization: {e}")
         
     # Set up dual-rate optimization: low LR for pre-trained backbones, higher LR for fusion & classification heads
     model.train()

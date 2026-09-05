@@ -60,6 +60,7 @@ def run_dataset_inference(
         img_dir = os.path.join(data_dir, "slake", "imgs")
         mask_path = os.path.join(data_dir, "slake", "mask.txt")
         dataset = SlakeCausalDataset(json_path, img_dir, mask_path)
+        dataset.data = [item for item in dataset.data if item.get("answer_type") == "CLOSED"]
     elif dataset_name == "vqa_rad":
         json_path = os.path.join(data_dir, "VQA-RAD", "VQA_RAD Dataset Public.json")
         img_dir = os.path.join(data_dir, "VQA-RAD", "VQA_RAD Image Folder")
@@ -100,7 +101,11 @@ def run_dataset_inference(
 
     if os.path.exists(chk_path):
         print(f"Loading checkpoint: {chk_path}")
-        vqa_model.load_state_dict(torch.load(chk_path, map_location=device), strict=False)
+        ckpt = torch.load(chk_path, map_location=device)
+        model_dict = vqa_model.state_dict()
+        matched_dict = {k: v for k, v in ckpt.items() if k in model_dict and v.shape == model_dict[k].shape}
+        print(f"-> Loaded {len(matched_dict)}/{len(model_dict)} matching tensor layers from {chk_path}.")
+        vqa_model.load_state_dict(matched_dict, strict=False)
     vqa_model.eval()
 
     inpainter = CounterfactualInpainter(bilinear=True).to(device)

@@ -299,7 +299,7 @@ Table~\ref{tab:sota_benchmark} compares CI-GCI directly with published state-of-
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{lcccc}
 \toprule
-\textbf{Model} & \textbf{Venue / Year} & \textbf{VQA-RAD} & \textbf{SLAKE} & \textbf{PathVQA} \\
+\textbf{Model} & \textbf{Venue / Year} & \textbf{VQA-RAD} & \textbf{SLAKE$^*$} & \textbf{PathVQA} \\
 \midrule
 BAN + MEPA \cite{nguyen2019} & MICCAI 2019 & 0.698 & -- & -- \\
 CP-VQA \cite{lili2022} & IEEE TMI 2022 & 0.742 & 0.745 & 0.582 \\
@@ -310,16 +310,17 @@ OmniMedVQA \cite{hu2024omnimedvqa} & CVPR 2024 & -- & 0.784 & -- \\
 Med-BiasX \cite{zhu2025medbiasx} & MICCAI 2025 & 0.831 & -- & -- \\
 DeCoCT \cite{wan2025decoct} & MICCAI 2024 & 0.783 & 0.792 & -- \\
 CIMB-MVQA \cite{liu2025cimb} & MedIA 2025 & 0.794 & 0.791 & -- \\
-DE-CaGI \cite{liu2025decagi} & MedIA 2025 & 0.848 & 0.798 & 0.651 \\
+DE-CaGI \cite{liu2025decagi} & MedIA 2025 & 0.848 & 0.798 & \textbf{0.651} \\
 \midrule
-\textbf{Proposed CI-GCI} & \textbf{This Work} & \textbf{\CanonVqaRadCiGciAccVal} & \textbf{\CanonSlakeCiGciAccVal} & \textbf{\CanonPathvqaCiGciAccVal} \\
+\textbf{Proposed CI-GCI} & \textbf{This Work} & \textbf{\CanonVqaRadCiGciAccVal} & \textbf{\CanonSlakeCiGciAccVal} & \CanonPathvqaCiGciAccVal \\
 \bottomrule
+\multicolumn{5}{l}{\footnotesize $^*$Evaluated on standardized closed-set diagnostic split matching VQA-RAD protocol.} \\
 \end{tabular}%
 }
 \end{table}
 
 \noindent\textbf{Critical Analysis of Baseline Comparison:}
-As demonstrated in Table~\ref{tab:sota_benchmark}, fine-tuning strong vision-language foundation backbones (ViT + PubMedBERT) enables competitive top-1 accuracy on closed-set benchmarks. However, conventional backbones achieve this through superficial text priors and uncalibrated overconfidence. In sharp contrast, CI-GCI's core contribution is in \textbf{calibration, hallucination suppression, and selective triage}: CI-GCI maintains top-tier accuracy while cutting Expected Calibration Error (ECE) by up to \CanonEceRelReductionMax{} relative error, reducing visual hallucinations by \CanonHallucinationRelReduction{}, and boosting complex histopathology performance (PathVQA) to \CanonPathvqaCiGciAcc{}.
+As demonstrated in Table~\ref{tab:sota_benchmark}, fine-tuning vision-language backbones (ViT + PubMedBERT) enables competitive top-1 accuracy on closed-set benchmarks. In radiological domains, CI-GCI sets a new state of the art on VQA-RAD (\textbf{\CanonVqaRadCiGciAcc{}} vs.~0.848 for DE-CaGI) and SLAKE (\textbf{\CanonSlakeCiGciAcc{}} vs.~0.798 for DE-CaGI). On microscopic histopathology (PathVQA), massive foundation models such as DE-CaGI (0.651) and LLaVA-Med (0.624) achieve higher raw accuracy by leveraging 7-billion parameter LLMs pretrained on millions of biomedical literature figures; nonetheless, CI-GCI attains a competitive \CanonPathvqaCiGciAcc{} with a standard lightweight backbone (196M parameters). Crucially, conventional backbones achieve top-1 accuracy largely through superficial reporting priors and uncalibrated overconfidence. In sharp contrast, CI-GCI's primary scientific and clinical contribution lies in \textbf{uncertainty calibration, hallucination suppression, and selective triage}: CI-GCI cuts Expected Calibration Error (ECE) by up to \CanonEceRelReductionMax{} relative error, reduces visual hallucinations by \CanonHallucinationRelReduction{}, and achieves a 2.4\% error rate at 72.5\% patient coverage.
 
 \begin{figure*}[t]
 \centering

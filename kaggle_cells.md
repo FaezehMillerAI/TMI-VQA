@@ -107,13 +107,13 @@ Select which dataset you wish to train on by setting the `--dataset` argument:
 
 ```python
 # Option A: Fine-tune on SLAKE
-!PYTHONPATH=. python3 training/train_slake_vqa.py --dataset slake --epochs 3 --batch_size 16 --device cuda
+!PYTHONPATH=. python3 training/train_slake_vqa.py --dataset slake --epochs 15 --batch_size 16 --lr 5e-4 --device cuda
 
 # Option B: Fine-tune on VQA-RAD
-# !PYTHONPATH=. python3 training/train_slake_vqa.py --dataset vqa_rad --epochs 3 --batch_size 16 --device cuda
+!PYTHONPATH=. python3 training/train_slake_vqa.py --dataset vqa_rad --epochs 15 --batch_size 16 --lr 5e-4 --device cuda
 
-# Option C: Fine-tune on PathVQA
-# !PYTHONPATH=. python3 training/train_slake_vqa.py --dataset pathvqa --epochs 3 --batch_size 16 --device cuda
+# Option C: Fine-tune on PathVQA (End-to-End Training, Inference & SOTA Aggregation)
+!PYTHONPATH=. python3 scripts/train_and_eval_pathvqa.py --epochs 10 --batch_size 16 --lr 5e-4 --device cuda
 
 # Option D: Fine-tune on Kvasir-VQA
 # !PYTHONPATH=. python3 training/train_slake_vqa.py --dataset kvasir --epochs 3 --batch_size 16 --device cuda
