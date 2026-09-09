@@ -1,0 +1,38 @@
+# Ignore massive datasets and zips
+data/
+PathVQA/
+Kvasir/
+VQA-RAD/
+ms-cxr-making-the-most-of-text-semantics-to-improve-biomedical-vision-language-processing-1.1.0/
+*.zip
+*.parquet
+
+# Ignore large PDFs and CSV data
+*.pdf
+*.csv
+
+# Ignore local virtual environment and checkpoints
+.venv/
+models/*.pth
+models/*.pt
+outputs/
+
+# Ignore Python caches
+__pycache__/
+*.pyc
+
+# Ignore duplicate images and OS junk
+.DS_Store
+* (*).png
+MD TMI/
+Output 5 Sep 2026/
+Results 5sep/
+outputsv2/
+scratch/
+Manuscript TMI [0-9]*/
+Manuscript TMI/
+manuscript_tmi_ready_for_overleaf/
+Final Audit/
+demo/
+*.ipynb
+

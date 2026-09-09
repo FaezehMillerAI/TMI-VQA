@@ -1,0 +1,32 @@
+seed: 42
+device: "cpu"
+
+model:
+  visual_encoder: "vit"
+  visual_dim: 768
+  text_encoder: "pubmedbert"
+  text_dim: 768
+  decoder_name: "qwen-small"
+  decoder_dim: 768
+  max_seq_len: 128
+
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  curriculum_dir: "data/curriculum"
+  dataset_name: "slake"
+  batch_size: 4
+  num_workers: 0
+
+train:
+  learning_rate: 0.0001
+  weight_decay: 0.00001
+  epochs: 3
+  checkpoint_dir: "outputs/checkpoints/baseline"
+  log_interval: 5
+  val_interval: 1
+  lambda_qa: 1.0
+  lambda_ground: 0.0
+  lambda_cons: 0.0
+  lambda_hallu: 0.0
+  lambda_cal: 0.0
