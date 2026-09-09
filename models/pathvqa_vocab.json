@@ -1,0 +1,18 @@
+{
+    "ans2idx": {
+        "yes": 0,
+        "no": 1,
+        "right": 2,
+        "negative": 3,
+        "left": 4,
+        "positive": 5
+    },
+    "idx2ans": {
+        "0": "yes",
+        "1": "no",
+        "2": "right",
+        "3": "negative",
+        "4": "left",
+        "5": "positive"
+    }
+}

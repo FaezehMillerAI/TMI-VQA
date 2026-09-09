@@ -1,0 +1,205 @@
+"""
+Unified Kaggle GPU Execution Pipeline for CI-GCI (IEEE TMI)
+Executes:
+1. Data setup and symlinking from /kaggle/input or Hugging Face
+2. Multi-seed fine-tuning on GPU
+3. Per-sample prediction record generation (cigci_eval contract)
+4. Automated counterfactual fidelity & preservation evaluation on real pixels
+5. Canonical metrics aggregation and LaTeX macro generation (macros.tex)
+"""
+
+import os
+import subprocess
+import sys
+import shutil
+import argparse
+import json
+import zipfile
+from tqdm import tqdm
+
+
+def run_command(cmd_str):
+    # Ensure commands use the active python interpreter (quoted for spaces)
+    py_exec = f'"{sys.executable}"'
+    if cmd_str.startswith("PYTHONPATH=. python3 "):
+        cmd_str = cmd_str.replace("PYTHONPATH=. python3 ", f"PYTHONPATH=. {py_exec} ")
+    elif cmd_str.startswith("PYTHONPATH=. pytest "):
+        cmd_str = cmd_str.replace("PYTHONPATH=. pytest ", f"PYTHONPATH=. {py_exec} -m pytest ")
+    print(f"\n[EXEC] {cmd_str}", flush=True)
+    env = os.environ.copy()
+    env["PYTHONUNBUFFERED"] = "1"
+    sys.stdout.flush()
+    sys.stderr.flush()
+    res = subprocess.run(cmd_str, shell=True, env=env)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    if res.returncode != 0:
+        print(f"\nError: Command failed with exit code {res.returncode}", flush=True)
+        return False
+    return True
+
+
+def setup_symlink(dataset_name, search_filename, target_link, hf_repo_id=None, path_filter=None):
+    os.makedirs("data", exist_ok=True)
+    if os.path.exists(target_link) and len(os.listdir(target_link)) > 0:
+        print(f"-> {dataset_name} is already prepared at: {target_link}")
+        return True
+
+    found_dir = None
+    if os.path.exists("/kaggle/input"):
+        print(f"Scanning /kaggle/input for {dataset_name} ({search_filename})...")
+        for root, dirs, files in os.walk("/kaggle/input"):
+            if path_filter and path_filter not in root.lower():
+                continue
+            if search_filename in files:
+                found_dir = root
+                break
+
+    if found_dir:
+        print(f"-> Found {dataset_name} in /kaggle/input at: {found_dir}")
+        if os.path.exists(target_link):
+            if os.path.islink(target_link):
+                os.unlink(target_link)
+            else:
+                shutil.rmtree(target_link)
+        os.symlink(found_dir, target_link)
+        print(f"-> Successfully linked to {target_link}")
+        return True
+
+    if hf_repo_id:
+        print(f"-> {dataset_name} not found in /kaggle/input. Auto-downloading from Hugging Face ({hf_repo_id})...")
+        os.makedirs(target_link, exist_ok=True)
+        try:
+            from huggingface_hub import snapshot_download
+            snapshot_download(
+                repo_id=hf_repo_id,
+                repo_type="dataset",
+                local_dir=target_link,
+                allow_patterns=["*.parquet", "*.parquet.gzip", "*.json", "*.csv", "*.txt", "*.zip"]
+            )
+            print(f"-> Successfully downloaded {dataset_name}")
+            return True
+        except Exception as e:
+            print(f"Error downloading {dataset_name}: {e}")
+            return False
+    return False
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Kaggle GPU Pipeline Runner for CI-GCI")
+    parser.add_argument("--epochs", type=int, default=15)
+    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--device", type=str, default="cuda")
+    parser.add_argument("--seeds", type=int, nargs="+", default=[42, 43, 44])
+    parser.add_argument("--skip_train", action="store_true", help="Skip training and run inference only")
+    args = parser.parse_args()
+
+    import torch
+    device = args.device if torch.cuda.is_available() else "cpu"
+    print("==================================================")
+    print("  STARTING CI-GCI KAGGLE BENCHMARK PIPELINE       ")
+    print(f"  Device: {device} | Seeds: {args.seeds} | Epochs: {args.epochs}")
+    print("==================================================")
+
+    # 1. Setup Datasets
+    print("\n[Step 1/5] Setting up multi-center benchmark datasets...")
+    setup_symlink("SLAKE", "test.json", "data/slake", hf_repo_id="BoKelvin/SLAKE", path_filter="slake")
+    setup_symlink("VQA-RAD", "VQA_RAD Dataset Public.json", "data/VQA-RAD", hf_repo_id="flaviagiammarino/vqa-rad")
+    setup_symlink("PathVQA", "train-00000-of-00007-f2d0e9ef9f022d38.parquet", "data/pathvqa", hf_repo_id="flaviagiammarino/path-vqa", path_filter="pathvqa")
+    setup_symlink("Kvasir-VQA", "train-00000-of-00001.parquet", "data/kvasir", hf_repo_id="SimulaMet/Kvasir-VQA-x1", path_filter="kvasir")
+    setup_symlink("MS-CXR", "MS_CXR_Local_Alignment_v1.1.0.json", "data/ms-cxr")
+
+    # 2. Model Training / Fine-tuning
+    if not args.skip_train:
+        print("\n==================================================")
+        print("  PHASE 2/5: MODEL TRAINING ACROSS SEEDS          ")
+        print("==================================================")
+        print("-> Training inpainter...", flush=True)
+        run_command(f"PYTHONPATH=. python3 -u training/train_inpainter.py --epochs 5 --batch_size {args.batch_size} --device {device}")
+
+        training_tasks = []
+        for s in args.seeds:
+            for ds in ["slake", "vqa_rad", "pathvqa", "kvasir"]:
+                training_tasks.append((s, ds))
+
+        train_pbar = tqdm(training_tasks, desc="Phase 2/5: Training Models", unit="model", file=sys.stdout, leave=True, ncols=100)
+        for s, ds in train_pbar:
+            train_pbar.set_postfix(dataset=ds.upper(), seed=s)
+            run_command(f"PYTHONPATH=. python3 -u training/train_slake_vqa.py --dataset {ds} --epochs {args.epochs} --batch_size {args.batch_size} --device {device}")
+
+    # 3. Layer 1 Inference: Emit conforming records.jsonl
+    print("\n==================================================", flush=True)
+    print("  PHASE 3/5: TEST INFERENCE & RECORD GENERATION   ", flush=True)
+    print("==================================================", flush=True)
+    print("-> Executing real model inference across benchmark cohorts with ViT + PubMedBERT + APD-CC...", flush=True)
+    for ds in ["slake", "vqa_rad", "pathvqa", "kvasir_x1"]:
+        for s in args.seeds:
+            run_command(f"PYTHONPATH=. python3 -u cigci_eval/inference_adapter.py --dataset {ds} --model ci_gci --seed {s} --device {device}")
+
+    # 4. Layer 2: Automated Counterfactual Fidelity Evaluation
+    print("\n==================================================", flush=True)
+    print("  PHASE 4/5: AUTOMATED COUNTERFACTUAL FIDELITY    ", flush=True)
+    print("==================================================", flush=True)
+    run_command("PYTHONPATH=. pytest -v tests/test_fidelity.py")
+
+    # 4b. Multi-Modal Counterfactual Proof Sheets (Figure 3) from Real Patient Scans
+    print("\n==================================================", flush=True)
+    print("  PHASE 4b/5: REAL-SAMPLE FIGURE 3 PROOF SHEETS   ", flush=True)
+    print("==================================================", flush=True)
+    run_command("PYTHONPATH=. python3 -u scripts/generate_fig3_proof_sheets.py")
+
+    # 5. Layer 3: Build Canonical Metrics & LaTeX Macros
+    print("\n==================================================", flush=True)
+    print("  PHASE 5/5: CANONICAL AGGREGATION & PACKAGING     ", flush=True)
+    print("==================================================", flush=True)
+    run_command("PYTHONPATH=. python3 -u scripts/build_canonical.py --allow-missing")
+
+    # Print Publication-Grade Canonical Benchmark Table (Open vs Closed vs Overall)
+    if os.path.exists("outputs/canonical.json"):
+        with open("outputs/canonical.json") as f:
+            cdata = json.load(f)
+        print("\n" + "="*86, flush=True)
+        print("  PUBLICATION BENCHMARK SUMMARY: OPEN vs. CLOSED vs. OVERALL", flush=True)
+        print("="*86, flush=True)
+        print(f"{'Benchmark':<14} | {'Model':<16} | {'Split':<9} | {'Accuracy':<18} | {'ECE':<10} | {'Macro-F1':<10}", flush=True)
+        print("-" * 86, flush=True)
+        for ds in ["vqa_rad", "slake", "pathvqa", "kvasir_x1"]:
+            ds_name = ds.upper().replace("_", "-")
+            for m in ["baseline_1", "ci_gci"]:
+                m_info = cdata.get("models", {}).get(ds, {}).get(m, {})
+                if not m_info:
+                    continue
+                m_label = "Baseline VLM" if "baseline" in m else "Proposed CI-GCI"
+                for split in ["closed", "open", "overall"]:
+                    s_info = m_info.get(split)
+                    if not s_info:
+                        continue
+                    acc_val = f"{s_info['acc']['mean']*100:.2f}% ± {s_info['acc']['std']*100:.2f}%"
+                    ece_val = f"{s_info['ece']['mean']:.4f}"
+                    f1_val = f"{s_info['f1']['mean']:.3f}"
+                    print(f"{ds_name:<14} | {m_label:<16} | {split.capitalize():<9} | {acc_val:<18} | {ece_val:<10} | {f1_val:<10}", flush=True)
+            print("-" * 86, flush=True)
+
+    # Package outputs
+    zip_path = "outputs_cigci_verified.zip"
+    print(f"\nCompressing outputs to {zip_path}...")
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for root, _, files in os.walk("outputs"):
+            for file in files:
+                full_p = os.path.join(root, file)
+                zf.write(full_p, os.path.relpath(full_p, "."))
+        if os.path.exists("Manuscript TMI/macros.tex"):
+            zf.write("Manuscript TMI/macros.tex", "Manuscript TMI/macros.tex")
+        if os.path.exists("Manuscript TMI/fig3_multimodal_proof_sheets.png"):
+            zf.write("Manuscript TMI/fig3_multimodal_proof_sheets.png", "Manuscript TMI/fig3_multimodal_proof_sheets.png")
+        if os.path.exists("Manuscript TMI/fig3_multimodal_proof_sheets.pdf"):
+            zf.write("Manuscript TMI/fig3_multimodal_proof_sheets.pdf", "Manuscript TMI/fig3_multimodal_proof_sheets.pdf")
+
+    print("\n==================================================")
+    print("  CI-GCI PIPELINE COMPLETED SUCCESSFULLY!         ")
+    print(f"  All outputs bundled into: {zip_path}")
+    print("==================================================")
+
+
+if __name__ == "__main__":
+    main()

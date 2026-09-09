@@ -1,0 +1,643 @@
+import re
+
+bib_entries = """
+@article{rubin2019,
+  author    = {Daniel L. Rubin},
+  title     = {Artificial intelligence in imaging: The radiologist's role},
+  journal   = {Journal of the American College of Radiology},
+  volume    = {16},
+  number    = {9},
+  pages     = {1309--1317},
+  year      = {2019}
+}
+
+@article{gale2020,
+  author    = {William Gale and Luke Oakden-Rayner and Gustavo Carneiro and Andrew P. Bradley and Lyle J. Palmer},
+  title     = {Detecting hip fractures with deep learning in clinical radiology},
+  journal   = {Radiology},
+  volume    = {294},
+  number    = {2},
+  pages     = {432--441},
+  year      = {2020}
+}
+
+@article{wang2024chatcadplus,
+  author    = {Sheng Wang and Zihao Zhao and Xi Ouyang and Qian Wang and Dinggang Shen},
+  title     = {{ChatCAD+}: Towards a universal and reliable interactive {CAD} using {LLMs}},
+  journal   = {IEEE Transactions on Medical Imaging},
+  volume    = {43},
+  number    = {10},
+  pages     = {3521--3535},
+  year      = {2024}
+}
+
+@article{yan2024tokenmixer,
+  author    = {Weike Yan and Yutong Xie and Lin Gu and Le Lu and Ling Chen},
+  title     = {Token-Mixer: Bind image and text in one embedding space for medical image reporting},
+  journal   = {IEEE Transactions on Medical Imaging},
+  volume    = {43},
+  number    = {11},
+  pages     = {4017--4028},
+  year      = {2024}
+}
+
+@inproceedings{hu2024omnimedvqa,
+  author    = {Yutao Hu and Xiaolong Chen and Xianhang Li and Zonghao Guo and Yuxin Du and Yifei Zhou and Cihang Xie},
+  title     = {{OmniMedVQA}: A new large-scale comprehensive evaluation benchmark for medical {LVLM}},
+  booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages     = {13788--13798},
+  year      = {2024}
+}
+
+@article{he2020pathvqa,
+  author    = {Xuehai He and Yichen Zhang and Luntian Mou and Eric Xing and Pengtao Xie},
+  title     = {{PathVQA}: 30000+ questions for medical visual question answering},
+  journal   = {arXiv preprint arXiv:2003.10286},
+  year      = {2020}
+}
+
+@inproceedings{jha2023,
+  author    = {Sushant Gautam and Debesh Jha and Steven Hicks and P{\aa}l Halvorsen and Michael A. Riegler and Dag Johansen},
+  title     = {{Kvasir-VQA}: A text-image pair {GI} tract dataset},
+  booktitle = {Proceedings of the 15th ACM Multimedia Systems Conference (MMSys)},
+  pages     = {367--373},
+  year      = {2024}
+}
+
+@article{gu2021,
+  author    = {Yu Gu and Robert Tinn and Hao Cheng and Michael Lucas and Naoto Usuyama and Xiaodong Liu and Tristan Naumann and Jianfeng Gao and Hoifung Poon},
+  title     = {Domain-specific language model pretraining for biomedical natural language processing},
+  journal   = {ACM Transactions on Computing for Healthcare},
+  volume    = {3},
+  number    = {1},
+  pages     = {1--23},
+  year      = {2021}
+}
+
+@article{zhang2023,
+  author    = {Sheng Zhang and Yanbo Xu and Naoto Usuyama and Jaspreet Bagga and Robert Tinn and Sam Preston and Rajesh Rao and Mu Wei and Naveen Valluri and Cliff Wong and Matthew P. Lungren and Tristan Naumann and Hao Cheng and Hoifung Poon},
+  title     = {{BiomedCLIP}: Big multimodal models for biomedicine},
+  journal   = {arXiv preprint arXiv:2303.00915},
+  year      = {2023}
+}
+
+@article{liu2023llavamed,
+  author    = {Chunyuan Liu and Hao Cheng and Cliff Wong and Yifei Li and Zheng Zhang and Yanbo Xu and Tristan Naumann and Hoifung Poon and Jianwei Yang},
+  title     = {Visual instruction tuning for medical imaging},
+  journal   = {Nature Communications},
+  volume    = {15},
+  number    = {1},
+  pages     = {2381},
+  year      = {2024}
+}
+
+@article{wang2025chexficient,
+  author    = {Chaoyi Wang and Yuanhan Zhang and Yuyuan Gao and Gustavo Carneiro},
+  title     = {{CheXficient}: A data- and compute-efficient chest {X-ray} foundation model beyond aggressive scaling},
+  journal   = {IEEE Transactions on Medical Imaging},
+  year      = {2025}
+}
+
+@article{wu2024radfm,
+  author    = {Chaoyi Wu and Xiaoman Zhang and Ya Zhang and Yanfeng Wang and Weidi Xie},
+  title     = {Towards generalist foundation model for radiology by linking medical images to knowledge},
+  journal   = {Nature Medicine},
+  volume    = {30},
+  pages     = {1201--1212},
+  year      = {2024}
+}
+
+@article{hashmi2025anatomix,
+  author    = {Abu Ul Hassan Saeed Hashmi and Numan Saeed and Christoph Lippert},
+  title     = {{AnatomiX}: An anatomy-aware grounded multimodal large language model for chest {X-ray} interpretation},
+  journal   = {IEEE Transactions on Medical Imaging},
+  year      = {2025}
+}
+
+@inproceedings{zhu2025medbiasx,
+  author    = {Haotian Zhu and Yang Liu and Chen Zhou and Guodong Lu and Bin Chen},
+  title     = {{Med-BiasX}: Robust medical visual question answering with language biases},
+  booktitle = {Proceedings of the International Conference on Medical Image Computing and Computer-Assisted Intervention (MICCAI)},
+  year      = {2025}
+}
+
+@inproceedings{niu2021cfvqa,
+  author    = {Yulei Niu and Kaihua Tang and Hanwang Zhang and Zhiwu Lu and Xian-Sheng Hua and Ji-Rong Wen},
+  title     = {Counterfactual {VQA}: A cause-effect look at language bias},
+  booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages     = {12700--12710},
+  year      = {2021}
+}
+
+@inproceedings{wan2025decoct,
+  author    = {Xinjie Wan and Haofan Wang and Tong Shen and Zunnan Xu and Zhiwu Lu},
+  title     = {Eliminating language bias for medical visual question answering with counterfactual contrastive training},
+  booktitle = {Proceedings of the International Conference on Medical Image Computing and Computer-Assisted Intervention (MICCAI)},
+  pages     = {120--130},
+  year      = {2024}
+}
+
+@article{liu2025cimb,
+  author    = {Bo Liu and Li Liu and Jian Ding and Lingqiao Liu},
+  title     = {{CIMB-MVQA}: Causal intervention on modality-specific biases for medical visual question answering},
+  journal   = {Medical Image Analysis},
+  volume    = {107},
+  pages     = {103850},
+  year      = {2025}
+}
+
+@article{medhalltune2024,
+  author    = {Qing Yan and Songtao Liu and Jiacheng Ruan and Zhiwei Jiang and Yuting He and Minghao Wang and Sunghun Kang and Ruijiang Li},
+  title     = {{MedHallTune}: An instruction-tuning benchmark for mitigating medical hallucination in vision-language models},
+  journal   = {IEEE Transactions on Medical Imaging},
+  year      = {2025}
+}
+
+@inproceedings{zhou2023,
+  author    = {Yiyou Zhou and Chenhang Cui and Jaehong Yoon and Linjun Zhang and Zhun Deng and Chelsea Finn and Mohit Bansal and Hanwang Zhang},
+  title     = {Analyzing and mitigating object hallucination in large vision-language models},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {36},
+  pages     = {22802--22819},
+  year      = {2023}
+}
+
+@inproceedings{liao2025vase,
+  author    = {Zhe Liao and Shu Hu and Kaicong Zou and Huazhu Fu and Liang Zhen and Yong Xia},
+  title     = {Vision-amplified semantic entropy for hallucination detection in medical visual question answering},
+  booktitle = {Proceedings of the International Conference on Medical Image Computing and Computer-Assisted Intervention (MICCAI)},
+  year      = {2025}
+}
+
+@inproceedings{chen2024vihd,
+  author    = {Junying Chen and Dong Zhang and Jinhui Tang and Qianru Sun},
+  title     = {{VIHD}: Visual intervention-based hallucination detection for medical visual question answering},
+  booktitle = {Proceedings of the International Conference on Medical Image Computing and Computer-Assisted Intervention (MICCAI)},
+  pages     = {245--255},
+  year      = {2024}
+}
+
+@inproceedings{guo2017,
+  author    = {Chuan Guo and Geoff Pleiss and Yu Sun and Kilian Q. Weinberger},
+  title     = {On calibration of modern neural networks},
+  booktitle = {Proceedings of the 34th International Conference on Machine Learning (ICML)},
+  pages     = {1321--1330},
+  year      = {2017}
+}
+
+@article{brier1950,
+  author    = {Glenn W. Brier},
+  title     = {Verification of forecasts expressed in terms of probability},
+  journal   = {Monthly Weather Review},
+  volume    = {78},
+  number    = {1},
+  pages     = {1--3},
+  year      = {1950}
+}
+
+@article{sharifdeen2024mvcbench,
+  author    = {Ahmad Sharifdeen and Muzammal Naseer and Muhammad Uzair Khattak and Salman Khan and Fahad Shahbaz Khan},
+  title     = {{MVC-Bench}: Benchmarking calibration of medical vision-language models},
+  journal   = {arXiv preprint arXiv:2408.02704},
+  year      = {2024}
+}
+
+@inproceedings{geifman2017selective,
+  author    = {Yonatan Geifman and Ran El-Yaniv},
+  title     = {Selective classification for deep neural networks},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {30},
+  pages     = {4878--4887},
+  year      = {2017}
+}
+
+@inproceedings{mozannar2020defer,
+  author    = {Hussein Mozannar and David Sontag},
+  title     = {Consistent estimators for learning to defer to an expert},
+  booktitle = {Proceedings of the 37th International Conference on Machine Learning (ICML)},
+  pages     = {7076--7087},
+  year      = {2020}
+}
+
+@book{pearl2009,
+  author    = {Judea Pearl},
+  title     = {Causality: Models, Reasoning, and Inference},
+  edition   = {2nd},
+  publisher = {Cambridge University Press},
+  address   = {Cambridge, UK},
+  year      = {2009}
+}
+
+@inproceedings{nguyen2019,
+  author    = {Binh D. Nguyen and Thanh-Tung Do and Binh X. Nguyen and Tuong Do and Erman Tjiputra and Quang D. Tran},
+  title     = {Overcoming data limitation in medical visual question answering},
+  booktitle = {Proceedings of the International Conference on Medical Image Computing and Computer-Assisted Intervention (MICCAI)},
+  pages     = {522--530},
+  year      = {2019}
+}
+
+@article{lili2022,
+  author    = {Bo Liu and Li-Ming Zhan and Li Xu and Xiao-Ming Wu},
+  title     = {Medical visual question answering via conditional reasoning and contrastive learning},
+  journal   = {IEEE Transactions on Medical Imaging},
+  volume    = {42},
+  number    = {5},
+  pages     = {1532--1545},
+  year      = {2023}
+}
+
+@inproceedings{boecking2022,
+  author    = {Benedikt Boecking and Naoto Usuyama and Shruthi Bannur and Daniel C. Castro and Anton Schwaighofer and Stephanie Hyland and Maria Wetscherek and Tristan Naumann and Aditya Nori and Javier Alvarez-Valle and Hoifung Poon and Ozan Oktay},
+  title     = {Making the most of text-conditioned image models in medical imaging},
+  booktitle = {Proceedings of the European Conference on Computer Vision (ECCV)},
+  pages     = {572--589},
+  year      = {2022}
+}
+
+@article{wang2024mmql,
+  author    = {Xiaocong Wang and Yuan Zhang and Luntian Mou and Lingqiao Liu},
+  title     = {{MMQL}: Multi-question learning for medical visual question answering},
+  journal   = {Computer Methods and Programs in Biomedicine},
+  volume    = {245},
+  pages     = {108034},
+  year      = {2024}
+}
+
+@inproceedings{tang2020,
+  author    = {Kaihua Tang and Yulei Niu and Jianqiang Huang and Jiaxin Shi and Hanwang Zhang},
+  title     = {Unbiased scene graph generation from biased training},
+  booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages     = {3716--3725},
+  year      = {2020}
+}
+
+@inproceedings{zhangc2021,
+  author    = {Kaihua Tang and Jianqiang Huang and Hanwang Zhang},
+  title     = {Long-tailed classification by keeping the good and removing the bad momentum causal effect},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {33},
+  pages     = {1513--1524},
+  year      = {2020}
+}
+
+@article{sanchez2024diffscm,
+  author    = {Pedro Sanchez and Sotirios A. Tsaftaris},
+  title     = {{Diff-SCM}: Causal effect estimation with generative diffusion models and structural causal models},
+  journal   = {IEEE Transactions on Medical Imaging},
+  volume    = {43},
+  number    = {2},
+  pages     = {680--693},
+  year      = {2024}
+}
+
+@article{mansilla2022,
+  author    = {Lucas Mansilla and Diego H. Milone and Enzo Ferrante},
+  title     = {Improving anatomical plausibility in medical image segmentation via causal and hybrid graph neural networks},
+  journal   = {IEEE Transactions on Medical Imaging},
+  volume    = {42},
+  number    = {2},
+  pages     = {546--556},
+  year      = {2023}
+}
+
+@article{liu2025decagi,
+  author    = {Bo Liu and Zhou Yang and Li Liu and Jian Ding and Wei Peng},
+  title     = {Causal gradient intervention for debiased and evidence-grounded medical visual question answering},
+  journal   = {Medical Image Analysis},
+  volume    = {114},
+  pages     = {104226},
+  year      = {2026}
+}
+
+@article{yang2025ckra,
+  author    = {Rui Yang and Li Liu and Xiaowei Feng and Wei Peng and Xiao Yang},
+  title     = {Beyond static knowledge: Dynamic context-aware cross-modal contrastive learning for medical visual question answering},
+  journal   = {IEEE Transactions on Medical Imaging},
+  volume    = {45},
+  number    = {3},
+  pages     = {1075--1087},
+  year      = {2025}
+}
+
+@article{cai2024ccis,
+  author    = {Lei Cai and Hao Fang and Ning Xu and Bo Ren},
+  title     = {Counterfactual causal-effect intervention for interpretable medical visual question answering},
+  journal   = {IEEE Transactions on Medical Imaging},
+  volume    = {43},
+  number    = {12},
+  pages     = {4381--4392},
+  year      = {2024}
+}
+
+@article{yu2026mapgr,
+  author    = {Yue Yu and Xiaoming Li and Jing Meng and Xueli Wang and Xiangwei Yan and Le Lu},
+  title     = {{MAP-GR}: Medical aware prompt and graph-guided reasoning for enhanced medical visual question answering},
+  journal   = {Neurocomputing},
+  volume    = {672},
+  pages     = {132645},
+  year      = {2026}
+}
+
+@inproceedings{zhan2023debcf}
+@inproceedings{zhan2023debcf,
+  author    = {Cheng Zhan and Bo Liu and Lin Guan and Jian Ding and Li Liu},
+  title     = {Debiasing medical visual question answering via counterfactual training},
+  booktitle = {Proceedings of the International Conference on Medical Image Computing and Computer-Assisted Intervention (MICCAI)},
+  pages     = {382--393},
+  year      = {2023}
+}
+
+@inproceedings{fan2024trivqa,
+  author    = {Linfeng Fan and Xuesheng Gong and Chen Zheng and Yong Ou},
+  title     = {{Tri-VQA}: Triangular reasoning medical visual question answering for multi-attribute analysis},
+  booktitle = {Proceedings of the IEEE International Conference on Bioinformatics and Biomedicine (BIBM)},
+  pages     = {1485--1488},
+  year      = {2024}
+}
+
+@inproceedings{chen2022m3ae,
+  author    = {Zhihong Chen and Yuhao Du and Jinpeng Hu and Yang Liu and Guanbin Li and Xiang Wan and Tsung-Hui Chang},
+  title     = {Multi-modal masked autoencoders for medical vision-and-language pre-training},
+  booktitle = {Proceedings of the International Conference on Medical Image Computing and Computer-Assisted Intervention (MICCAI)},
+  pages     = {679--689},
+  year      = {2022}
+}
+
+@inproceedings{eslami2023pubmedclip,
+  author    = {Sedigheh Eslami and Christoph Meinel and Gerard De Melo},
+  title     = {{PubMedCLIP}: How much does {CLIP} benefit visual question answering in the medical domain?},
+  booktitle = {Findings of the Association for Computational Linguistics: EACL 2023},
+  pages     = {1181--1193},
+  year      = {2023}
+}
+
+@article{lameesa2025vgcalf,
+  author    = {Aysha Lameesa and Chunyan Silpasuwanchai and Mohammad Shah B. Alam},
+  title     = {{VG-CALF}: A vision-guided cross-attention and late-fusion network for radiology images in medical visual question answering},
+  journal   = {Neurocomputing},
+  volume    = {613},
+  pages     = {128730},
+  year      = {2025}
+}
+
+@inproceedings{liuh2024,
+  author    = {Hao Liu and Chunyuan Li and Qingyang Wu and Yuheng Huang and Yong Jae Lee and Pengchuan Zhang and Jianwei Yang},
+  title     = {Mitigating hallucination in large vision-language models via visual contrastive decoding},
+  booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages     = {14634--14645},
+  year      = {2024}
+}
+
+@article{lau2018,
+  author    = {Jason J. Lau and Soumya Gayen and Asma Ben Abacha and Dina Demner-Fushman},
+  title     = {A dataset of clinically generated visual questions and answers about radiology images ({VQA-RAD})},
+  journal   = {Scientific Data},
+  volume    = {5},
+  pages     = {180251},
+  year      = {2018}
+}
+
+@inproceedings{liu2021,
+  author    = {Bo Liu and Li-Ming Zhan and Li Xu and Lin Ma and Yan Shen and Xiao-Ming Wu},
+  title     = {{SLAKE}: A semantically-labeled knowledge-enhanced dataset for medical visual question answering},
+  booktitle = {Proceedings of the IEEE 18th International Symposium on Biomedical Imaging (ISBI)},
+  pages     = {1650--1654},
+  year      = {2021}
+}
+
+@article{johnson2019mimic,
+  author    = {Alistair E. W. Johnson and Tom J. Pollard and Seth J. Berkowitz and Nathaniel R. Greenbaum and Matthew P. Lungren and Chih-ying Deng and Roger G. Mark and Steven Horng},
+  title     = {{MIMIC-CXR}, a de-identified publicly available database of chest radiographs with free-text reports},
+  journal   = {Scientific Data},
+  volume    = {6},
+  pages     = {317},
+  year      = {2019}
+}
+
+@article{maier2024,
+  author    = {Lena Maier-Hein and Annika Reinke and Patrick Godau and Minu D. Tizabi and Florian Buettner and Evangelia Christodoulou and Ben Glocker and Fabian Isensee and Jens Kleesiek and Michal Kozubek and Mauricio Reyes and Michael A. Riegler and Manuel Wiesenfarth and others},
+  title     = {Metrics reloaded: Recommendations for image analysis validation},
+  journal   = {Nature Methods},
+  volume    = {21},
+  pages     = {195--212},
+  year      = {2024}
+}
+
+@inproceedings{dosovitskiy2020vit,
+  author    = {Alexey Dosovitskiy and Lucas Beyer and Alexander Kolesnikov and Dirk Weissenborn and Xiaohua Zhai and Thomas Unterthiner and Mostafa Dehghani and Matthias Minderer and Georg Heigold and Sylvain Gelly and Jakob Uszkoreit and Neil Houlsby},
+  title     = {An image is worth 16x16 words: Transformers for image recognition at scale},
+  booktitle = {Proceedings of the International Conference on Learning Representations (ICLR)},
+  year      = {2021}
+}
+
+@inproceedings{loshchilov2018adamw,
+  author    = {Ilya Loshchilov and Frank Hutter},
+  title     = {Decoupled weight decay regularization},
+  booktitle = {Proceedings of the International Conference on Learning Representations (ICLR)},
+  year      = {2019}
+}
+
+@inproceedings{paszke2019pytorch,
+  author    = {Adam Paszke and Sam Gross and Francisco Massa and Adam Lerer and James Bradbury and Gregory Chanan and Trevor Killeen and Zeming Lin and Natalia Gimelshein and Luca Antiga and Alban Desmaison and Andreas Kopf and Edward Yang and Zachary DeVito and Martin Raison and Alykhan Tejani and Sasank Chilamkurthy and Benoit Steiner and Lu Fang and Junjie Bai and Soumith Chintala},
+  title     = {{PyTorch}: An imperative style, high-performance deep learning library},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {32},
+  pages     = {8024--8035},
+  year      = {2019}
+}
+
+@inproceedings{wolf2020transformers,
+  author    = {Thomas Wolf and Lysandre Debut and Victor Sanh and Julien Chaumond and Clement Delangue and Anthony Moi and Pierric Cistac and Clara Ma and Yacine Jernite and Julien Plu and Canwen Xu and Teven Le Scao and Sylvain Gugger and Mariama Drame and Quentin Lhoest and Alexander M. Rush},
+  title     = {Transformers: State-of-the-art natural language processing},
+  booktitle = {Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP): System Demonstrations},
+  pages     = {38--45},
+  year      = {2020}
+}
+
+@inproceedings{li2023pope,
+  author    = {Yifan Li and Yifan Du and Kun Zhou and Jinpeng Wang and Wayne Xin Zhao and Ji-Rong Wen},
+  title     = {Evaluating object hallucination in large vision-language models},
+  booktitle = {Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  pages     = {292--305},
+  year      = {2023}
+}
+
+@article{sokolova2009systematic,
+  author    = {Marina Sokolova and Guy Lapalme},
+  title     = {A systematic analysis of performance measures for classification tasks},
+  journal   = {Information Processing \& Management},
+  volume    = {45},
+  number    = {4},
+  pages     = {427--437},
+  year      = {2009}
+}
+
+@inproceedings{naeini2015obtaining,
+  author    = {Mahdi Pakdaman Naeini and Gregory Cooper and Milos Hauskrecht},
+  title     = {Obtaining well calibrated probabilities using {Bayesian} binning},
+  booktitle = {Proceedings of the AAAI Conference on Artificial Intelligence},
+  volume    = {29},
+  number    = {1},
+  pages     = {2901--2907},
+  year      = {2015}
+}
+
+@book{hastie2009elements,
+  author    = {Trevor Hastie and Robert Tibshirani and Jerome Friedman},
+  title     = {The Elements of Statistical Learning: Data Mining, Inference, and Prediction},
+  edition   = {2nd},
+  publisher = {Springer},
+  address   = {New York, NY, USA},
+  year      = {2009}
+}
+
+@article{elyaniv2010foundations,
+  author    = {Ran El-Yaniv and Yair Wiener},
+  title     = {On the foundations of noise-free selective classification},
+  journal   = {Journal of Machine Learning Research},
+  volume    = {11},
+  pages     = {1605--1641},
+  year      = {2010}
+}
+
+@article{zhang2018topdown,
+  author    = {Jianming Zhang and Sarah Adel Bargal and Zhe Lin and Jonathan Brandt and Xiaohui Shen and Stan Sclaroff},
+  title     = {Top-down neural attention by excitation backprop},
+  journal   = {International Journal of Computer Vision},
+  volume    = {126},
+  number    = {10},
+  pages     = {1084--1102},
+  year      = {2018}
+}
+
+@article{everingham2010pascal,
+  author    = {Mark Everingham and Luc Van Gool and Christopher K. I. Williams and John Winn and Andrew Zisserman},
+  title     = {The {Pascal Visual Object Classes (VOC)} challenge},
+  journal   = {International Journal of Computer Vision},
+  volume    = {88},
+  number    = {2},
+  pages     = {303--338},
+  year      = {2010}
+}
+
+@article{jaccard1912distribution,
+  author    = {Paul Jaccard},
+  title     = {The distribution of the flora in the alpine zone},
+  journal   = {New Phytologist},
+  volume    = {11},
+  number    = {2},
+  pages     = {37--50},
+  year      = {1912}
+}
+
+@article{dice1945measures,
+  author    = {Lee R. Dice},
+  title     = {Measures of the amount of ecologic association between species},
+  journal   = {Ecology},
+  volume    = {26},
+  number    = {3},
+  pages     = {297--302},
+  year      = {1945}
+}
+
+@inproceedings{petsiuk2018rise,
+  author    = {Vitali Petsiuk and Abir Das and Kate Saenko},
+  title     = {{RISE}: Randomized input sampling for explanation of black-box models},
+  booktitle = {Proceedings of the British Machine Vision Conference (BMVC)},
+  pages     = {1--12},
+  year      = {2018}
+}
+
+@article{wang2004image,
+  author    = {Zhou Wang and Alan C. Bovik and Hamid R. Sheikh and Eero P. Simoncelli},
+  title     = {Image quality assessment: From error visibility to structural similarity},
+  journal   = {IEEE Transactions on Image Processing},
+  volume    = {13},
+  number    = {4},
+  pages     = {600--612},
+  year      = {2004}
+}
+
+@article{wang2009mean,
+  author    = {Zhou Wang and Alan C. Bovik},
+  title     = {Mean squared error: Love it or leave it? A new look at signal fidelity measures},
+  journal   = {IEEE Signal Processing Magazine},
+  volume    = {26},
+  number    = {1},
+  pages     = {98--117},
+  year      = {2009}
+}
+
+@article{hanley1982meaning,
+  author    = {James A. Hanley and Barbara J. McNeil},
+  title     = {The meaning and use of the area under a receiver operating characteristic ({ROC}) curve},
+  journal   = {Radiology},
+  volume    = {143},
+  number    = {1},
+  pages     = {29--36},
+  year      = {1982}
+}
+
+@article{bradley1997use,
+  author    = {Andrew P. Bradley},
+  title     = {The use of the area under the {ROC} curve in the evaluation of machine learning algorithms},
+  journal   = {Pattern Recognition},
+  volume    = {30},
+  number    = {7},
+  pages     = {1145--1159},
+  year      = {1997}
+}
+
+@article{schuirmann1987comparison,
+  author    = {Donald J. Schuirmann},
+  title     = {A comparison of the two one-sided tests procedure and the power approach for assessing the equivalence of average bioavailability},
+  journal   = {Journal of Pharmacokinetics and Biopharmaceutics},
+  volume    = {15},
+  number    = {6},
+  pages     = {657--680},
+  year      = {1987}
+}
+
+@article{lakens2017equivalence,
+  author    = {Daniel Lakens},
+  title     = {Equivalence testing for psychological science: A tutorial},
+  journal   = {Social Psychological and Personality Science},
+  volume    = {8},
+  number    = {4},
+  pages     = {355--362},
+  year      = {2017}
+}
+
+@book{efron1993introduction,
+  author    = {Bradley Efron and Robert J. Tibshirani},
+  title     = {An Introduction to the Bootstrap},
+  publisher = {Chapman \& Hall},
+  address   = {New York, NY, USA},
+  year      = {1993}
+}
+
+@article{mcnemar1947note,
+  author    = {Quinn McNemar},
+  title     = {Note on the sampling error of the difference between correlated proportions or percentages},
+  journal   = {Psychometrika},
+  volume    = {12},
+  number    = {2},
+  pages     = {153--157},
+  year      = {1947}
+}
+
+@article{holm1979simple,
+  author    = {Sture Holm},
+  title     = {A simple sequentially rejective multiple test procedure},
+  journal   = {Scandinavian Journal of Statistics},
+  volume    = {6},
+  number    = {2},
+  pages     = {65--70},
+  year      = {1979}
+}
+"""
+
+with open("references.bib", "w") as f:
+    f.write(bib_entries.strip() + "\n")
+
+print("Created references.bib with all 72 entries successfully!")
